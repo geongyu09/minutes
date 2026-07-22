@@ -1,0 +1,49 @@
+# 중앙 서버 배포 단위 — minutes 서버 + Ollama 사이드카
+# 사용법: docker compose up -d --build  (최초 색인은 README 참조)
+services:
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    ports:
+      - '8787:8787'
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+    env_file:
+      # NOTION_API_KEY, NOTION_ROOT_PAGE_IDS를 여기서 주입한다
+      - path: apps/server/.env
+        required: false
+    volumes:
+      - minutes-data:/app/apps/server/data
+    depends_on:
+      ollama:
+        condition: service_healthy
+      ollama-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama-models:/root/.ollama
+    healthcheck:
+      test: ['CMD', 'ollama', 'list']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  # 임베딩 모델을 미리 받아두는 일회성 서비스
+  ollama-init:
+    image: ollama/ollama:latest
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ['ollama', 'pull', 'nomic-embed-text']
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: 'no'
+
+volumes:
+  minutes-data:
+  ollama-models:
