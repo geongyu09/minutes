@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Retriever, SearchResult } from '@minutes/core';
-import { handleHealth, handleSearch } from './handlers';
+import { handleHealth, handleIndex, handleSearch } from './handlers';
 
 function fakeResult(id: string): SearchResult {
   return {
@@ -101,5 +101,59 @@ describe('handleHealth', () => {
     expect(res.body.status).toBe('error');
     expect(res.body.db).toBe('ok');
     expect(res.body.embedding).toContain('인증 실패');
+  });
+});
+
+describe('handleIndex', () => {
+  function deps(overrides: Partial<Parameters<typeof handleIndex>[1]> = {}) {
+    const calls: string[] = [];
+    return {
+      calls,
+      deps: {
+        clearCursor: async () => {
+          calls.push('clear');
+        },
+        start: () => {
+          calls.push('start');
+          return true;
+        },
+        getState: () => ({ status: 'idle' }) as const,
+        ...overrides,
+      },
+    };
+  }
+
+  it('full 모드는 잡 시작 전에 커서를 리셋하고 202를 반환한다', async () => {
+    const { calls, deps: d } = deps();
+    const res = await handleIndex('full', d);
+
+    expect(calls).toEqual(['clear', 'start']);
+    expect(res.status).toBe(202);
+  });
+
+  it('incremental 모드는 커서를 리셋하지 않는다', async () => {
+    const { calls, deps: d } = deps();
+    const res = await handleIndex('incremental', d);
+
+    expect(calls).toEqual(['start']);
+    expect(res.status).toBe(202);
+  });
+
+  it('이미 실행 중이면 409를 반환하고 커서를 건드리지 않는다', async () => {
+    const { calls, deps: d } = deps({
+      getState: () => ({ status: 'running', mode: 'full', indexed: 3, total: 10 }) as const,
+    });
+    const res = await handleIndex('full', d);
+
+    expect(calls).toEqual([]);
+    expect(res.status).toBe(409);
+    expect(res.body.job.status).toBe('running');
+  });
+
+  it('start가 경합으로 실패하면 409를 반환한다', async () => {
+    const { deps: d } = deps({ start: () => false });
+    const res = await handleIndex('incremental', d);
+
+    expect(res.status).toBe(409);
   });
 });

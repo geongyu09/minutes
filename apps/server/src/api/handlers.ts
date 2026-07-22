@@ -1,4 +1,5 @@
 import type { Retriever, SearchResult } from '@minutes/core';
+import type { IndexJobState } from '@/ingestion/indexJobs';
 
 export interface SearchResponseBody {
   results?: SearchResult[];
@@ -53,4 +54,40 @@ export async function handleSearch(body: unknown, retriever: Retriever): Promise
   const t0 = Date.now();
   const results = await retriever.retrieve(query.trim(), topK !== undefined ? { topK } : undefined);
   return { status: 200, body: { results, tookMs: Date.now() - t0 } };
+}
+
+export interface IndexDeps {
+  clearCursor: () => Promise<void>;
+  /** 백그라운드 잡 시작 — 이미 실행 중이면 false */
+  start: () => boolean;
+  getState: () => IndexJobState;
+}
+
+export interface IndexHandlerResult {
+  status: number;
+  body: { job: IndexJobState };
+}
+
+/**
+ * POST /index — 색인은 시작만 하고 즉시 202를 반환한다 (색인 전체를 동기 응답으로 붙들면
+ * 수백 건 규모에서 requestTimeout을 넘긴다). 이미 실행 중이면 409와 현재 상태.
+ * full은 정의상 전체를 다시 훑으므로 커서를 리셋한 뒤 시작한다.
+ */
+export async function handleIndex(
+  mode: 'full' | 'incremental',
+  deps: IndexDeps
+): Promise<IndexHandlerResult> {
+  if (deps.getState().status === 'running') {
+    return { status: 409, body: { job: deps.getState() } };
+  }
+  if (mode === 'full') await deps.clearCursor();
+  if (!deps.start()) {
+    return { status: 409, body: { job: deps.getState() } };
+  }
+  return { status: 202, body: { job: deps.getState() } };
+}
+
+/** GET /index/status — 데스크톱이 폴링해 진행률을 표시한다. */
+export function handleIndexStatus(getState: () => IndexJobState): IndexHandlerResult {
+  return { status: 200, body: { job: getState() } };
 }

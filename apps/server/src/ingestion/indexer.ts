@@ -1,6 +1,6 @@
 import { logger } from '@minutes/core';
 import type { EmbeddedChunk } from '@minutes/core';
-import { embedder } from '@/embedder';
+import { embedder, RateLimitError } from '@/embedder';
 import { createVectorStore, deleteDocument, getAllDocumentIds } from '@/retrieval/vectorStore';
 import {
   listConnected,
@@ -19,6 +19,8 @@ export interface IndexingResult {
   indexed: number;
   failed: number;
   deleted: number;
+  /** 쿼터 초과·인증 만료 등으로 중단됨 — 커서를 전진시키지 않았다 */
+  aborted?: { reason: 'rate_limit' | 'unauthorized'; message: string };
 }
 
 export interface IndexingSummary extends IndexingResult {
@@ -45,20 +47,36 @@ function defaultDeps(connection: NotionConnection): IndexerDeps {
 export async function runIndexingForConnection(
   connection: NotionConnection,
   mode: 'full' | 'incremental',
-  deps: IndexerDeps = defaultDeps(connection)
+  deps: IndexerDeps = defaultDeps(connection),
+  onProgress?: (progress: { indexed: number; total: number }) => void
 ): Promise<IndexingResult> {
   // 색인 진행 중 수정된 문서가 다음 회차에서 누락되지 않도록 시작 시각으로 기록한다
   const startedAt = new Date();
   const vectorStore = createVectorStore(connection.id);
 
-  const documents =
-    mode === 'full'
-      ? await deps.source.fetchAll()
-      : await deps.source.fetchUpdatedSince(await getLastSyncTime(connection.id));
-
   let indexed = 0;
   let failed = 0;
-  for (const doc of documents) {
+  const failedEditedTimes: number[] = [];
+  let aborted: IndexingResult['aborted'];
+
+  // 수집 단계에서 건너뛴 페이지도 "실패 문서"다 — 커서 계산에 똑같이 포함시킨다
+  const onSkip = (page: { lastEditedTime: string }) => {
+    failed++;
+    failedEditedTimes.push(new Date(page.lastEditedTime).getTime());
+  };
+
+  const since = mode === 'incremental' ? await getLastSyncTime(connection.id) : undefined;
+  // total은 선-수집한 페이지 목록 길이 — 진행 로그와 결과 보고에 쓴다
+  const pageRefs = await deps.source.listPageRefs();
+  const targetRefs = since ? pageRefs.filter((p) => new Date(p.lastEditedTime) > since) : pageRefs;
+  const total = targetRefs.length;
+  onProgress?.({ indexed: 0, total });
+
+  const documents = since
+    ? deps.source.fetchUpdatedSince(since, { onSkip })
+    : deps.source.fetchAll({ onSkip });
+
+  for await (const doc of documents) {
     try {
       const chunks = chunkDocument(doc);
       if (chunks.length === 0) continue;
@@ -69,16 +87,33 @@ export async function runIndexingForConnection(
       await vectorStore.upsert(embedded);
 
       indexed++;
-      logger.info(`[${indexed}/${documents.length}] ${doc.title} — 청크 ${chunks.length}개`);
+      onProgress?.({ indexed, total });
+      logger.info(`[${indexed}/${total}] ${doc.title} — 청크 ${chunks.length}개`);
     } catch (err) {
+      // 중단 오류: 남은 문서도 같은 이유로 실패할 것이므로 즉시 멈추고 커서를 건드리지 않는다
+      if (err instanceof RateLimitError) {
+        aborted = { reason: 'rate_limit', message: String(err) };
+      } else if (isUnauthorized(err)) {
+        aborted = { reason: 'unauthorized', message: String(err) };
+      }
+      if (aborted) {
+        logger.error(`색인 중단 (${aborted.reason}): ${doc.title}`, aborted.message);
+        break;
+      }
       failed++;
+      failedEditedTimes.push(new Date(doc.lastEditedTime).getTime());
       logger.error(`색인 실패: ${doc.title}`, String(err));
       // 한 문서가 실패해도 나머지는 계속 진행
     }
   }
 
+  if (aborted) {
+    // 삭제 정리도 커서 전진도 하지 않는다 — 다음 회차가 이번 대상을 그대로 다시 시도한다
+    return { mode, total, indexed, failed, deleted: 0, aborted };
+  }
+
   // 삭제된 문서 정리 — 노션에 없는데 이 연결의 DB에 있는 문서를 지운다
-  const currentIds = new Set((await deps.source.listPageRefs()).map((p) => p.id));
+  const currentIds = new Set(pageRefs.map((p) => p.id));
   const storedIds = await getAllDocumentIds(connection.id);
   let deleted = 0;
   for (const id of storedIds) {
@@ -88,12 +123,42 @@ export async function runIndexingForConnection(
     }
   }
 
-  await setLastSyncTime(connection.id, startedAt);
-  return { mode, total: documents.length, indexed, failed, deleted };
+  // 실패한 문서는 다음 회차 대상에 다시 포함되도록 커서를 그 문서 시각 앞으로 되돌린다
+  // (fetchUpdatedSince가 `>` 비교이므로 1ms를 빼야 경계의 문서가 포함된다)
+  const cursor =
+    failedEditedTimes.length > 0
+      ? new Date(Math.min(startedAt.getTime(), Math.min(...failedEditedTimes) - 1))
+      : startedAt;
+  await setLastSyncTime(connection.id, cursor);
+  return { mode, total, indexed, failed, deleted };
 }
 
 function isUnauthorized(err: unknown): boolean {
   return (err as { status?: number })?.status === 401;
+}
+
+/**
+ * 액세스 토큰이 만료(401)되면 refresh_token으로 한 번 갱신 후 재시도한다.
+ * API의 백그라운드 잡과 스케줄러가 공유하는 진입점.
+ */
+export async function indexConnectionWithRefresh(
+  connection: NotionConnection,
+  mode: 'full' | 'incremental',
+  onProgress?: (progress: { indexed: number; total: number }) => void
+): Promise<IndexingResult> {
+  try {
+    return await runIndexingForConnection(connection, mode, undefined, onProgress);
+  } catch (err) {
+    if (!isUnauthorized(err) || !connection.refreshToken) throw err;
+    const renewed = await refreshTokens(connection.refreshToken);
+    updateConnectionTokens(connection.id, renewed);
+    return runIndexingForConnection(
+      { ...connection, accessToken: renewed.accessToken },
+      mode,
+      undefined,
+      onProgress
+    );
+  }
 }
 
 /**
@@ -117,15 +182,7 @@ export async function runIndexing(mode: 'full' | 'incremental'): Promise<Indexin
 
   for (const connection of connections) {
     try {
-      let result: IndexingResult;
-      try {
-        result = await runIndexingForConnection(connection, mode);
-      } catch (err) {
-        if (!isUnauthorized(err) || !connection.refreshToken) throw err;
-        const renewed = await refreshTokens(connection.refreshToken);
-        updateConnectionTokens(connection.id, renewed);
-        result = await runIndexingForConnection({ ...connection, accessToken: renewed.accessToken }, mode);
-      }
+      const result = await indexConnectionWithRefresh(connection, mode);
       summary.total += result.total;
       summary.indexed += result.indexed;
       summary.failed += result.failed;
