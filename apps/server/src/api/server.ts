@@ -6,6 +6,7 @@ import { createVectorStore, countDocuments } from '@/retrieval/vectorStore';
 import { getLastSyncTime } from '@/ingestion/syncState';
 import { runIndexingForConnection } from '@/ingestion/indexer';
 import { db } from '@/db';
+import { checkEmbedding } from '@/embedder';
 import {
   completeConnection,
   createPendingConnection,
@@ -24,11 +25,6 @@ import {
 
 async function checkDb(): Promise<void> {
   db().prepare('SELECT count(*) FROM chunks').get();
-}
-
-async function checkOllama(): Promise<void> {
-  const res = await fetch(`${config.embedding.ollamaBaseUrl}/api/tags`);
-  if (!res.ok) throw new Error(`Ollama 응답 오류 (${res.status})`);
 }
 
 async function readJson(req: http.IncomingMessage): Promise<unknown> {
@@ -104,7 +100,7 @@ export function createServer(): http.Server {
         return;
       }
       if (req.method === 'GET' && url.pathname === '/health') {
-        const result = await handleHealth({ checkDb, checkOllama });
+        const result = await handleHealth({ checkDb, checkEmbedding });
         respond(res, result.status, result.body);
         return;
       }

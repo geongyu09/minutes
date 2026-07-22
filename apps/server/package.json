@@ -3,16 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "tsx watch src/main.ts",
-    "start": "tsx src/main.ts",
+    "dev": "tsx watch --env-file-if-exists=.env src/main.ts",
+    "start": "tsx --env-file-if-exists=.env src/main.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "index:all": "tsx scripts/index-all.ts",
-    "index:incremental": "tsx scripts/index-incremental.ts",
-    "search": "tsx scripts/search-test.ts",
-    "eval": "tsx scripts/eval.ts",
-    "db:migrate": "tsx scripts/migrate.ts"
+    "index:all": "tsx --env-file-if-exists=.env scripts/index-all.ts",
+    "index:incremental": "tsx --env-file-if-exists=.env scripts/index-incremental.ts",
+    "search": "tsx --env-file-if-exists=.env scripts/search-test.ts",
+    "eval": "tsx --env-file-if-exists=.env scripts/eval.ts",
+    "db:migrate": "tsx --env-file-if-exists=.env scripts/migrate.ts"
   },
   "dependencies": {
     "@minutes/core": "workspace:*",

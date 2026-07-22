@@ -1,5 +1,8 @@
-# 중앙 서버 배포 단위 — minutes 서버 + Ollama 사이드카
+# 중앙 서버 배포 단위 — minutes 서버
 # 사용법: docker compose up -d --build  (최초 색인은 README 참조)
+#
+# 12단계 — 임베딩을 Gemini API로 옮기면서 Ollama 사이드카를 비활성화했다.
+# 서버 자원에 여유가 생기면 아래 주석을 되살리고 embedder.ts를 Ollama 구현으로 되돌린다.
 services:
   server:
     build:
@@ -7,43 +10,49 @@ services:
       dockerfile: apps/server/Dockerfile
     ports:
       - '8787:8787'
-    environment:
-      OLLAMA_BASE_URL: http://ollama:11434
+    # environment:
+    #   OLLAMA_BASE_URL: http://ollama:11434
     env_file:
-      # NOTION_OAUTH_CLIENT_ID/SECRET/REDIRECT_URI를 여기서 주입한다
+      # NOTION_OAUTH_CLIENT_ID/SECRET/REDIRECT_URI와 GEMINI_API_KEY를 여기서 주입한다
       - path: apps/server/.env
         required: false
     volumes:
       - minutes-data:/app/apps/server/data
-    depends_on:
-      ollama:
-        condition: service_healthy
-      ollama-init:
-        condition: service_completed_successfully
+    # depends_on:
+    #   ollama:
+    #     condition: service_healthy
+    #   ollama-init:
+    #     condition: service_completed_successfully
     restart: unless-stopped
 
-  ollama:
-    image: ollama/ollama:latest
-    volumes:
-      - ollama-models:/root/.ollama
-    healthcheck:
-      test: ['CMD', 'ollama', 'list']
-      interval: 5s
-      timeout: 5s
-      retries: 12
-    restart: unless-stopped
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   environment:
+  #     # 검색 질의도 매번 임베딩이 필요하므로 모델을 메모리에서 내리지 않는다.
+  #     # 기본값(5m)이면 유휴 후 첫 검색에 모델 재로드 지연이 붙는다.
+  #     OLLAMA_KEEP_ALIVE: '-1'
+  #     # 여러 연결(팀)이 동시에 색인할 때의 동시 처리 수. 서버 코어 수에 맞춰 조정한다.
+  #     OLLAMA_NUM_PARALLEL: '4'
+  #   volumes:
+  #     - ollama-models:/root/.ollama
+  #   healthcheck:
+  #     test: ['CMD', 'ollama', 'list']
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 12
+  #   restart: unless-stopped
 
   # 임베딩 모델을 미리 받아두는 일회성 서비스
-  ollama-init:
-    image: ollama/ollama:latest
-    environment:
-      OLLAMA_HOST: http://ollama:11434
-    entrypoint: ['ollama', 'pull', 'nomic-embed-text']
-    depends_on:
-      ollama:
-        condition: service_healthy
-    restart: 'no'
+  # ollama-init:
+  #   image: ollama/ollama:latest
+  #   environment:
+  #     OLLAMA_HOST: http://ollama:11434
+  #   entrypoint: ['ollama', 'pull', 'nomic-embed-text']
+  #   depends_on:
+  #     ollama:
+  #       condition: service_healthy
+  #   restart: 'no'
 
 volumes:
   minutes-data:
-  ollama-models:
+  # ollama-models:

@@ -65,14 +65,14 @@ describe('handleSearch', () => {
 });
 
 describe('handleHealth', () => {
-  it('DB와 Ollama가 모두 정상이면 200을 반환한다', async () => {
+  it('DB와 임베딩 API가 모두 정상이면 200을 반환한다', async () => {
     const res = await handleHealth({
       checkDb: async () => {},
-      checkOllama: async () => {},
+      checkEmbedding: async () => {},
     });
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: 'ok', db: 'ok', ollama: 'ok' });
+    expect(res.body).toEqual({ status: 'ok', db: 'ok', embedding: 'ok' });
   });
 
   it('DB 확인이 실패하면 503과 오류 메시지를 반환한다', async () => {
@@ -80,26 +80,26 @@ describe('handleHealth', () => {
       checkDb: async () => {
         throw new Error('no such table');
       },
-      checkOllama: async () => {},
+      checkEmbedding: async () => {},
     });
 
     expect(res.status).toBe(503);
     expect(res.body.status).toBe('error');
     expect(res.body.db).toContain('no such table');
-    expect(res.body.ollama).toBe('ok');
+    expect(res.body.embedding).toBe('ok');
   });
 
-  it('Ollama 확인이 실패하면 503을 반환한다', async () => {
+  it('임베딩 API 확인이 실패하면 503을 반환한다', async () => {
     const res = await handleHealth({
       checkDb: async () => {},
-      checkOllama: async () => {
-        throw new Error('connect ECONNREFUSED');
+      checkEmbedding: async () => {
+        throw new Error('GEMINI_API_KEY 인증 실패');
       },
     });
 
     expect(res.status).toBe(503);
     expect(res.body.status).toBe('error');
     expect(res.body.db).toBe('ok');
-    expect(res.body.ollama).toContain('ECONNREFUSED');
+    expect(res.body.embedding).toContain('인증 실패');
   });
 });

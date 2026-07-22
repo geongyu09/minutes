@@ -13,15 +13,15 @@ export interface HandlerResult {
 
 export interface HealthDeps {
   checkDb: () => Promise<void>;
-  checkOllama: () => Promise<void>;
+  checkEmbedding: () => Promise<void>;
 }
 
 export interface HealthResult {
   status: number;
-  body: { status: 'ok' | 'error'; db: string; ollama: string };
+  body: { status: 'ok' | 'error'; db: string; embedding: string };
 }
 
-/** GET /health — DB·Ollama 연결을 확인한다. 하나라도 실패하면 503. */
+/** GET /health — DB·임베딩 API 연결을 확인한다. 하나라도 실패하면 503. */
 export async function handleHealth(deps: HealthDeps): Promise<HealthResult> {
   const check = async (fn: () => Promise<void>): Promise<string> => {
     try {
@@ -32,9 +32,9 @@ export async function handleHealth(deps: HealthDeps): Promise<HealthResult> {
     }
   };
 
-  const [db, ollama] = await Promise.all([check(deps.checkDb), check(deps.checkOllama)]);
-  const healthy = db === 'ok' && ollama === 'ok';
-  return { status: healthy ? 200 : 503, body: { status: healthy ? 'ok' : 'error', db, ollama } };
+  const [db, embedding] = await Promise.all([check(deps.checkDb), check(deps.checkEmbedding)]);
+  const healthy = db === 'ok' && embedding === 'ok';
+  return { status: healthy ? 200 : 503, body: { status: healthy ? 'ok' : 'error', db, embedding } };
 }
 
 const MAX_TOP_K = 50;
