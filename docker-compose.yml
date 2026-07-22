@@ -10,7 +10,7 @@ services:
     environment:
       OLLAMA_BASE_URL: http://ollama:11434
     env_file:
-      # NOTION_API_KEY, NOTION_ROOT_PAGE_IDS를 여기서 주입한다
+      # NOTION_OAUTH_CLIENT_ID/SECRET/REDIRECT_URI를 여기서 주입한다
       - path: apps/server/.env
         required: false
     volumes:
