@@ -29,11 +29,13 @@ interface Props {
   role: 'user' | 'assistant';
   text: string;
   citations: Citation[];
+  /** 전송 시 자동 스크롤의 대상이 되도록 DOM id를 부여한다 */
+  id?: string;
 }
 
-export function ChatMessage({ role, text, citations }: Props) {
+export function ChatMessage({ role, text, citations, id }: Props) {
   return (
-    <div className={`message ${role}`}>
+    <div id={id} className={`message ${role}`}>
       {role === 'assistant' ? renderWithCitations(text, citations) : text}
       {role === 'assistant' && citations.length > 0 && (
         <div className="sources">

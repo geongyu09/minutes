@@ -61,8 +61,11 @@ export function NotionConnect() {
         }
       }
       setState({ kind: 'error', message: '연결이 완료되지 않았습니다. 다시 시도해주세요.' });
-    } catch {
-      setState({ kind: 'error', message: '노션 연결에 실패했습니다. 서버 상태를 확인해주세요.' });
+    } catch (err) {
+      // 원인을 감추면 디버깅이 불가능하다 — 콘솔과 화면 양쪽에 남긴다
+      console.error('[notion-connect]', err);
+      const cause = err instanceof Error ? err.message : String(err);
+      setState({ kind: 'error', message: `노션 연결에 실패했습니다: ${cause}` });
     } finally {
       polling.current = false;
     }
