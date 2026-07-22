@@ -11,8 +11,12 @@ function toFtsQuery(query: string): string {
     .join(' ');
 }
 
-/** SQLite FTS5 키워드 검색 (unicode61 — 공백 단위, 고유명사 매칭용). */
-export async function keywordSearch(query: string, topK: number): Promise<SearchResult[]> {
+/** SQLite FTS5 키워드 검색 — 해당 연결(사용자)의 청크만 대상으로 한다. */
+export async function keywordSearch(
+  connectionId: string,
+  query: string,
+  topK: number
+): Promise<SearchResult[]> {
   const ftsQuery = toFtsQuery(query);
   if (!ftsQuery) return [];
 
@@ -24,11 +28,11 @@ export async function keywordSearch(query: string, topK: number): Promise<Search
               -bm25(chunks_fts) AS score
        FROM chunks_fts
        JOIN chunks c ON c.rowid = chunks_fts.rowid
-       JOIN documents d ON d.id = c.document_id
-       WHERE chunks_fts MATCH ?
+       JOIN documents d ON d.connection_id = c.connection_id AND d.id = c.document_id
+       WHERE chunks_fts MATCH ? AND c.connection_id = ?
        ORDER BY bm25(chunks_fts)
        LIMIT ?`
     )
-    .all(ftsQuery, topK) as Parameters<typeof toSearchResult>[0][];
+    .all(ftsQuery, connectionId, topK) as Parameters<typeof toSearchResult>[0][];
   return rows.map((row) => toSearchResult(row, 'keyword'));
 }
