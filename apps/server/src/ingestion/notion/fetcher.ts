@@ -7,6 +7,8 @@ export interface PageRef {
   url: string;
   lastEditedTime: string;
   parentTitle?: string;
+  /** DB 행 속성 색인용 — search 응답의 properties 원본 */
+  properties?: Record<string, unknown>;
 }
 
 export interface BlockNode {
@@ -33,6 +35,7 @@ function toPageRef(page: Record<string, any>): PageRef {
     title: extractTitle(page),
     url: page.url,
     lastEditedTime: page.last_edited_time,
+    properties: page.properties,
   };
 }
 

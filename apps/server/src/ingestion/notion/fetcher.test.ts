@@ -46,6 +46,23 @@ describe('listAllPages', () => {
     expect(calls).toEqual([undefined, 'cursor-2']);
   });
 
+  it('DB 행 속성 색인을 위해 properties를 그대로 전달한다', async () => {
+    const row = {
+      ...page('p1', '회의'),
+      properties: {
+        이름: { type: 'title', title: [{ plain_text: '회의' }] },
+        상태: { type: 'status', status: { name: '진행 중' } },
+      },
+    };
+    const client = {
+      search: async () => ({ results: [row], has_more: false, next_cursor: null }),
+    } as unknown as Client;
+
+    const pages = await listAllPages(client);
+
+    expect(pages[0].properties).toEqual(row.properties);
+  });
+
   it('페이지가 아닌 결과는 무시한다', async () => {
     const client = {
       search: async () => ({
