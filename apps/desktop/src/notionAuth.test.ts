@@ -33,6 +33,39 @@ describe('createNotionAuthClient', () => {
     expect(status).toEqual({ connected: true, workspaceName: '우리 팀' });
   });
 
+  it('startReconnect는 앱 토큰을 유지한 채 새 인가 URL만 받아온다', async () => {
+    let captured: { url: string; init?: RequestInit } | undefined;
+    const client = createNotionAuthClient('http://server:8787', async (url, init) => {
+      captured = { url: String(url), init };
+      return okResponse({ authUrl: 'https://notion.example/authorize?state=2' });
+    });
+
+    const authUrl = await client.startReconnect('app-token');
+
+    expect(captured?.url).toBe('http://server:8787/oauth/notion/reconnect');
+    expect(captured?.init?.method).toBe('POST');
+    expect((captured?.init?.headers as Record<string, string>).authorization).toBe(
+      'Bearer app-token'
+    );
+    expect(authUrl).toBe('https://notion.example/authorize?state=2');
+  });
+
+  it('cancel은 앱 토큰을 Bearer 헤더로 보내 진행 중인 인가를 취소한다', async () => {
+    let captured: { url: string; init?: RequestInit } | undefined;
+    const client = createNotionAuthClient('http://server:8787', async (url, init) => {
+      captured = { url: String(url), init };
+      return okResponse({ cancelled: true });
+    });
+
+    await client.cancel('app-token');
+
+    expect(captured?.url).toBe('http://server:8787/oauth/notion/cancel');
+    expect(captured?.init?.method).toBe('POST');
+    expect((captured?.init?.headers as Record<string, string>).authorization).toBe(
+      'Bearer app-token'
+    );
+  });
+
   it('서버 오류면 예외를 던진다', async () => {
     const client = createNotionAuthClient('http://server:8787', async () =>
       new Response('{}', { status: 500 })

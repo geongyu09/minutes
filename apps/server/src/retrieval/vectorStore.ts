@@ -166,6 +166,30 @@ export async function getAllDocumentIds(connectionId: string): Promise<string[]>
   return rows.map((r) => r.id);
 }
 
+/**
+ * 연결의 색인 데이터를 전부 비운다 (연결 변경으로 워크스페이스가 바뀐 경우).
+ * vec·fts는 rowid로만 지워지는 가상 테이블이라 CASCADE가 닿지 않는다 — 명시적으로 먼저 지운다.
+ */
+export async function deleteAllDocuments(connectionId: string): Promise<void> {
+  db().transaction(() => {
+    const rowids = (
+      db().prepare('SELECT rowid FROM chunks WHERE connection_id = ?').all(connectionId) as {
+        rowid: number;
+      }[]
+    ).map((r) => r.rowid);
+
+    const deleteVec = db().prepare('DELETE FROM chunks_vec WHERE rowid = ?');
+    const deleteFts = db().prepare('DELETE FROM chunks_fts WHERE rowid = ?');
+    for (const rowid of rowids) {
+      deleteVec.run(BigInt(rowid));
+      deleteFts.run(rowid);
+    }
+
+    db().prepare('DELETE FROM chunks WHERE connection_id = ?').run(connectionId);
+    db().prepare('DELETE FROM documents WHERE connection_id = ?').run(connectionId);
+  })();
+}
+
 export async function deleteDocument(connectionId: string, documentId: string): Promise<void> {
   db().transaction(() => {
     deleteChunksOfDocument(connectionId, documentId);

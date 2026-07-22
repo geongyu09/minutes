@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { db } from '@/db';
 import { applyMigrations } from '@/migrations';
 import {
+  cancelAuthorization,
   completeConnection,
   createPendingConnection,
   findByAppToken,
@@ -141,6 +142,50 @@ describe('startReconnect', () => {
     const result = completeConnection(state, { ...workspace, accessToken: 'refreshed' });
 
     expect(result?.workspaceChanged).toBe(false);
+  });
+});
+
+describe('cancelAuthorization', () => {
+  it('최초 연결 취소 — state를 지우고 pending으로 남긴다', () => {
+    const session = createPendingConnection();
+
+    cancelAuthorization(session.connectionId);
+
+    expect(hasOauthState(session.state)).toBe(false);
+    const found = findByAppToken(session.appToken);
+    expect(found?.status).toBe('pending');
+    expect(found?.reconnecting).toBe(false);
+  });
+
+  it('연결 변경 취소 — 기존 연결과 토큰은 그대로 살아 있다', () => {
+    const session = createPendingConnection();
+    completeConnection(session.state, workspace);
+    const state = startReconnect(session.connectionId)!;
+
+    cancelAuthorization(session.connectionId);
+
+    expect(hasOauthState(state)).toBe(false);
+    const found = findByAppToken(session.appToken);
+    expect(found?.status).toBe('connected');
+    expect(found?.accessToken).toBe(workspace.accessToken);
+    expect(found?.workspaceName).toBe('우리 팀');
+    expect(found?.reconnecting).toBe(false);
+  });
+
+  it('취소된 state로는 연결을 완료할 수 없다', () => {
+    const session = createPendingConnection();
+
+    cancelAuthorization(session.connectionId);
+
+    expect(completeConnection(session.state, workspace)).toBeNull();
+  });
+
+  it('진행 중인 인가가 없어도 오류 없이 동작한다 (멱등)', () => {
+    const session = createPendingConnection();
+    cancelAuthorization(session.connectionId);
+
+    expect(() => cancelAuthorization(session.connectionId)).not.toThrow();
+    expect(() => cancelAuthorization('no-such-connection')).not.toThrow();
   });
 });
 

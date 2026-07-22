@@ -12,6 +12,11 @@ export async function getLastSyncTime(connectionId: string): Promise<Date> {
   return row ? new Date(row.value) : new Date(0);
 }
 
+/** 연결 변경으로 색인 데이터를 폐기할 때 동기화 시각도 함께 되돌린다 — 다음 색인이 전체 색인이 된다. */
+export async function clearLastSyncTime(connectionId: string): Promise<void> {
+  db().prepare('DELETE FROM sync_state WHERE key = ?').run(syncKey(connectionId));
+}
+
 export async function setLastSyncTime(connectionId: string, date: Date): Promise<void> {
   db()
     .prepare(

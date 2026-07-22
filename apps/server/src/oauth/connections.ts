@@ -113,6 +113,21 @@ export function startReconnect(connectionId: string): string | null {
 }
 
 /**
+ * 인가 취소 — 진행 중인 state만 버린다. 앱 토큰·기존 노션 토큰·워크스페이스는 그대로 둔다.
+ * 최초 연결이면 pending(미연결)으로, 연결 변경 중이면 기존 연결이 살아 있는 상태로 돌아간다.
+ * 취소 뒤 돌아온 콜백은 state가 없으므로 `hasOauthState`에서 걸러진다. 멱등이다.
+ */
+export function cancelAuthorization(connectionId: string): void {
+  db()
+    .prepare(
+      `UPDATE notion_connections
+       SET oauth_state = NULL, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+       WHERE id = ?`
+    )
+    .run(connectionId);
+}
+
+/**
  * OAuth 콜백 — state로 세션을 찾아 노션 토큰·워크스페이스 정보를 저장한다. state는 1회용.
  * 직전과 다른 워크스페이스면 `workspaceChanged`로 알린다 (호출자가 색인 데이터를 폐기해야 한다).
  */
@@ -179,8 +194,7 @@ export function updateConnectionTokens(connectionId: string, grant: WorkspaceGra
 export function listConnected(): NotionConnection[] {
   const rows = db()
     .prepare(
-      `SELECT id, status, access_token, refresh_token, workspace_id, workspace_name
-       FROM notion_connections WHERE status = 'connected'`
+      `SELECT ${CONNECTION_COLUMNS} FROM notion_connections WHERE status = 'connected'`
     )
     .all() as ConnectionRow[];
   return rows.map(toConnection);
