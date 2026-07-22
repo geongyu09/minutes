@@ -49,8 +49,18 @@ function toConnection(row: ConnectionRow): NotionConnection {
   };
 }
 
+// 인가 화면에서 돌아오지 않은 pending 연결의 수명 — 지나면 정리한다 (무제한 누적 방지)
+const PENDING_TTL = '-1 hour';
+
 /** OAuth 시작 — 앱 토큰과 state를 발급하고 pending 연결을 만든다. 앱 토큰은 해시로만 저장. */
 export function createPendingConnection(): ConnectionSession {
+  db()
+    .prepare(
+      `DELETE FROM notion_connections
+       WHERE status = 'pending' AND created_at < strftime('%Y-%m-%dT%H:%M:%fZ', 'now', ?)`
+    )
+    .run(PENDING_TTL);
+
   const connectionId = randomUUID();
   const appToken = randomBytes(32).toString('base64url');
   const state = randomBytes(32).toString('base64url');
@@ -62,6 +72,14 @@ export function createPendingConnection(): ConnectionSession {
     .run(connectionId, hashToken(appToken), state);
 
   return { connectionId, appToken, state };
+}
+
+/** 콜백에서 노션 토큰 교환 전에 state가 살아 있는 세션인지 먼저 거른다 (외부 호출 증폭 방지). */
+export function hasPendingState(state: string): boolean {
+  const row = db()
+    .prepare(`SELECT 1 FROM notion_connections WHERE oauth_state = ? AND status = 'pending'`)
+    .get(state);
+  return row !== undefined;
 }
 
 /** OAuth 콜백 — state로 세션을 찾아 노션 토큰·워크스페이스 정보를 저장한다. state는 1회용. */

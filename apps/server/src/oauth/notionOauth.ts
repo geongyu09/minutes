@@ -29,6 +29,9 @@ async function requestTokens(
   fetchFn: typeof fetch
 ): Promise<OAuthTokens> {
   const { oauthClientId, oauthClientSecret } = config.notion;
+  if (!oauthClientId || !oauthClientSecret) {
+    throw new Error('NOTION_OAUTH_CLIENT_ID/SECRET이 설정되지 않았습니다');
+  }
   const res = await fetchFn(TOKEN_URL, {
     method: 'POST',
     headers: {
@@ -43,6 +46,9 @@ async function requestTokens(
   }
 
   const data: any = await res.json();
+  if (!data?.access_token) {
+    throw new Error('노션 토큰 응답이 유효하지 않습니다 (access_token 누락)');
+  }
   return {
     accessToken: data.access_token,
     refreshToken: data.refresh_token ?? undefined,

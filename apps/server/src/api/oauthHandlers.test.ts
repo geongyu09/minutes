@@ -51,6 +51,7 @@ describe('handleOauthSession', () => {
 
 describe('handleOauthCallback', () => {
   const deps = {
+    hasPendingState: (state: string) => state === 'state-1',
     exchange: async (code: string) => {
       if (code !== 'good-code') throw new Error('invalid_grant');
       return { accessToken: 'ntn-token', botId: 'b1', workspaceId: 'w1', workspaceName: '우리 팀' };
@@ -75,7 +76,7 @@ describe('handleOauthCallback', () => {
     expect((await handleOauthCallback({ code: 'good-code' }, deps)).status).toBe(400);
   });
 
-  it('알 수 없는 state면 400 (토큰 교환 전에 거른다)', async () => {
+  it('알 수 없는 state면 토큰 교환(외부 호출) 없이 400', async () => {
     let exchanged = false;
     const res = await handleOauthCallback(
       { code: 'good-code', state: 'unknown' },
@@ -90,7 +91,7 @@ describe('handleOauthCallback', () => {
     );
 
     expect(res.status).toBe(400);
-    expect(exchanged).toBe(true); // state 검증은 complete가 담당 — 교환 후 바인딩 실패 시 400
+    expect(exchanged).toBe(false); // state 선검증 — 무의미한 노션 API 호출을 막는다
   });
 });
 
