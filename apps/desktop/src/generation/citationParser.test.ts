@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { extractCitations } from './citationParser';
-import type { SearchResult } from '@/core/types';
+import type { SearchResult } from '@minutes/core';
 
 function result(id: string, title: string): SearchResult {
   return {

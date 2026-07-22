@@ -1,4 +1,4 @@
-import type { Citation, SearchResult } from '@/core/types';
+import type { Citation, SearchResult } from '@minutes/core';
 
 /** LLM 답변의 [출처 N] 표기를 실제 출처 메타데이터로 매핑한다. 범위 밖 번호(환각)는 버린다. */
 export function extractCitations(answer: string, sources: SearchResult[]): Citation[] {

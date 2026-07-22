@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildPrompt } from './promptBuilder';
-import type { SearchResult } from '@/core/types';
+import type { SearchResult } from '@minutes/core';
 
 function result(id: string, content: string, headingPath: string[] = []): SearchResult {
   return {
