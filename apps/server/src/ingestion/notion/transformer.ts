@@ -92,3 +92,60 @@ function blocksToMarkdown(blocks: BlockNode[], indent = 0): string {
 export function toMarkdown(blocks: BlockNode[]): string {
   return blocksToMarkdown(blocks).trim();
 }
+
+function dateToText(date: { start?: string; end?: string } | null): string {
+  if (!date?.start) return '';
+  return date.end ? `${date.start} – ${date.end}` : date.start;
+}
+
+/** 속성 값 하나를 텍스트로. 지원하지 않는 타입·빈 값은 빈 문자열. */
+function propertyToText(prop: any): string {
+  switch (prop?.type) {
+    case 'rich_text':
+      return (prop.rich_text ?? []).map((t: any) => t.plain_text).join('');
+    case 'select':
+      return prop.select?.name ?? '';
+    case 'status':
+      return prop.status?.name ?? '';
+    case 'multi_select':
+      return (prop.multi_select ?? []).map((o: any) => o.name).join(', ');
+    case 'people':
+      return (prop.people ?? []).map((p: any) => p.name).filter(Boolean).join(', ');
+    case 'date':
+      return dateToText(prop.date);
+    case 'number':
+      return prop.number == null ? '' : String(prop.number);
+    case 'checkbox':
+      return prop.checkbox ? '예' : '아니요';
+    case 'url':
+      return prop.url ?? '';
+    case 'email':
+      return prop.email ?? '';
+    case 'phone_number':
+      return prop.phone_number ?? '';
+    case 'formula':
+      return propertyToText(prop.formula);
+    case 'string':
+      return prop.string ?? '';
+    case 'boolean':
+      return prop.boolean == null ? '' : prop.boolean ? '예' : '아니요';
+    default:
+      return '';
+  }
+}
+
+/**
+ * DB 행 페이지의 속성을 "- 이름: 값" 목록으로 변환한다.
+ * title은 문서 제목으로 이미 쓰이므로 제외하고, 빈 값·미지원 타입은 생략한다.
+ */
+export function propertiesToMarkdown(properties: Record<string, any> | undefined): string {
+  if (!properties) return '';
+
+  const lines: string[] = [];
+  for (const [name, prop] of Object.entries(properties)) {
+    if (prop?.type === 'title') continue;
+    const text = propertyToText(prop);
+    if (text) lines.push(`- ${name}: ${text}`);
+  }
+  return lines.join('\n');
+}

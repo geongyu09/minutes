@@ -21,6 +21,7 @@ export async function throttled<T>(fn: () => Promise<T>): Promise<T> {
     const wait = Math.max(0, lastCallAt + gap - Date.now());
     if (wait > 0) await sleep(wait);
 
+    let lastErr: unknown;
     for (let attempt = 0; attempt < config.notion.maxRetries; attempt++) {
       try {
         lastCallAt = Date.now();
@@ -28,10 +29,14 @@ export async function throttled<T>(fn: () => Promise<T>): Promise<T> {
       } catch (err: unknown) {
         const status = (err as { status?: number })?.status ?? 0;
         if (status !== 429 && status < 500) throw err;
+        lastErr = err;
         const backoff = Math.min(2 ** attempt * 1000, 30_000);
         await sleep(backoff);
       }
     }
-    throw new Error('노션 API 재시도 횟수를 초과했습니다.');
+    // 원래 오류(상태 코드)를 보존한다 — 색인의 중단 오류 판정(401·429 구분)이 이 정보에 의존한다
+    throw Object.assign(new Error('노션 API 재시도 횟수를 초과했습니다.', { cause: lastErr }), {
+      status: (lastErr as { status?: number })?.status,
+    });
   });
 }

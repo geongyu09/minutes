@@ -56,8 +56,10 @@ export interface Message {
 /* ---------- 인터페이스 ---------- */
 
 export interface DocumentSource {
-  fetchAll(): Promise<RawDocument[]>;
-  fetchUpdatedSince(date: Date): Promise<RawDocument[]>;
+  // 스트리밍(AsyncIterable)인 이유: 페이지 1건의 오류가 전체 수집을 죽이지 않게
+  // 페이지 단위로 격리하고, 전체 문서를 메모리에 올리지 않기 위함
+  fetchAll(): AsyncIterable<RawDocument>;
+  fetchUpdatedSince(date: Date): AsyncIterable<RawDocument>;
 }
 
 export interface Embedder {
