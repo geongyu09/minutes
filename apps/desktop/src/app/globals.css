@@ -67,6 +67,35 @@ body {
   cursor: default;
 }
 
+.index-notice {
+  color: var(--danger, #c0392b);
+}
+
+.notion-connect {
+  position: relative;
+}
+
+/* 승인 대기 중 버튼 아래에 떠 있는 페이지 선택 안내 */
+.page-selection-notice {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 280px;
+  padding: 10px 12px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+  z-index: 10;
+  animation: pending-fade-in 0.3s ease-out;
+}
+
+.page-selection-notice strong {
+  color: var(--accent);
+}
+
 .messages {
   flex: 1;
   padding: 20px;
@@ -87,6 +116,14 @@ body {
   align-self: flex-end;
   background: var(--accent);
   color: #fff;
+  /* 전송 시 자동 스크롤이 고정 헤더 아래에 멈추도록 */
+  scroll-margin-top: 76px;
+}
+
+/* 아래 내용이 짧아도 마지막 질문을 화면 최상단까지 끌어올릴 수 있게 하는 하단 여백 */
+.messages-tail {
+  flex-shrink: 0;
+  min-height: calc(100dvh - 280px);
 }
 
 .message.assistant {

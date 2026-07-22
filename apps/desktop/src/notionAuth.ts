@@ -31,14 +31,20 @@ export interface ConnectSession {
 
 export interface ConnectionStatus {
   connected: boolean;
+  /** 인가 URL을 열어둔 상태 — 연결(또는 연결 변경) 완료 폴링의 종료 조건이다. */
+  reconnecting?: boolean;
   workspaceName?: string;
 }
 
 export interface NotionAuthClient {
   /** 연결 시작 — 서버가 앱 토큰과 노션 인가 URL을 발급한다. */
   startSession(): Promise<ConnectSession>;
+  /** 연결 변경 — 앱 토큰은 그대로 두고 새 인가 URL만 받는다. */
+  startReconnect(appToken: string): Promise<string>;
   /** 연결 완료 폴링. */
   getStatus(appToken: string): Promise<ConnectionStatus>;
+  /** 승인 대기 취소 — 진행 중인 인가만 버리고 기존 연결은 그대로 둔다. */
+  cancel(appToken: string): Promise<void>;
 }
 
 export function createNotionAuthClient(
@@ -52,12 +58,30 @@ export function createNotionAuthClient(
       return (await res.json()) as ConnectSession;
     },
 
+    async startReconnect(appToken) {
+      const res = await fetchFn(`${baseUrl}/oauth/notion/reconnect`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${appToken}` },
+      });
+      if (!res.ok) throw new Error(`노션 연결 변경 시작 실패 (${res.status})`);
+      const body = (await res.json()) as { authUrl: string };
+      return body.authUrl;
+    },
+
     async getStatus(appToken) {
       const res = await fetchFn(`${baseUrl}/oauth/notion/status`, {
         headers: { authorization: `Bearer ${appToken}` },
       });
       if (!res.ok) throw new Error(`연결 상태 조회 실패 (${res.status})`);
       return (await res.json()) as ConnectionStatus;
+    },
+
+    async cancel(appToken) {
+      const res = await fetchFn(`${baseUrl}/oauth/notion/cancel`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${appToken}` },
+      });
+      if (!res.ok) throw new Error(`연결 취소 실패 (${res.status})`);
     },
   };
 }

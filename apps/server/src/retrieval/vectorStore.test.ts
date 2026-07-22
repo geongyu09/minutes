@@ -6,6 +6,7 @@ import { completeConnection, createPendingConnection } from '@/oauth/connections
 import {
   countDocuments,
   createVectorStore,
+  deleteAllDocuments,
   deleteDocument,
   getAllDocumentIds,
 } from './vectorStore';
@@ -113,6 +114,25 @@ describe('문서 관리 헬퍼(연결별 스코프)', () => {
     expect(await countDocuments(userA)).toBe(1);
     expect(await getAllDocumentIds(userB)).toEqual(expect.arrayContaining(['doc-1', 'doc-2']));
     expect(await getAllDocumentIds(userA)).toEqual(['doc-1']);
+  });
+
+  it('deleteAllDocuments는 해당 사용자의 색인 데이터만 전부 비운다 (연결 변경 시 폐기)', async () => {
+    const userG = newConnection();
+    const userH = newConnection();
+    await createVectorStore(userG).upsert([chunk('doc-y', 0, 'G의 회의록', 9)]);
+    await createVectorStore(userG).upsert([chunk('doc-z', 0, 'G의 다른 회의록', 10)]);
+    await createVectorStore(userH).upsert([chunk('doc-y', 0, 'H의 회의록', 9)]);
+
+    await deleteAllDocuments(userG);
+
+    expect(await countDocuments(userG)).toBe(0);
+    expect(await createVectorStore(userG).count()).toBe(0);
+    // 가상 테이블(vec·fts)에 잔여 행이 남으면 이전 워크스페이스 내용이 계속 검색된다
+    expect(await createVectorStore(userG).search(vec(9), 10)).toEqual([]);
+    expect(await keywordSearch(userG, '회의록', 10)).toEqual([]);
+
+    expect(await countDocuments(userH)).toBe(1);
+    expect(await createVectorStore(userH).count()).toBe(1);
   });
 
   it('deleteDocument는 해당 사용자의 문서·청크만 지운다', async () => {
