@@ -14,10 +14,19 @@ export const config = {
     minTokens: 50,               // 이보다 작으면 앞 청크에 병합
   },
   embedding: {
-    model: 'nomic-embed-text',   // Ollama 로컬 모델. Recall 미달 시 'bge-m3'
+    // 12단계 — 한시적으로 Gemini API를 쓴다. 서버 자원에 여유가 생기면 Ollama로 되돌린다.
+    model: 'gemini-embedding-001',
     dimension: 768,              // 변경 시 db/migrations의 vec0 차원도 함께 변경
-    batchSize: 100,
-    ollamaBaseUrl: process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434',
+    batchSize: 100,              // batchEmbedContents 요청당 상한
+    geminiApiKey: process.env.GEMINI_API_KEY ?? '',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+    retryDelayMs: 1000,          // 일반 오류 재시도 기준 대기(지수 백오프)
+    rateLimitDelayMs: 60_000,    // 429는 즉시 재시도해도 다시 걸리므로 따로 대기
+    maxRetries: 3,
+
+    // Ollama 복귀용 설정 (12단계 롤백 시 되살린다)
+    // model: 'nomic-embed-text',   // Recall 미달 시 'bge-m3'
+    // ollamaBaseUrl: process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434',
   },
   storage: {
     sqlitePath: process.env.SQLITE_PATH ?? './data/minutes.db',

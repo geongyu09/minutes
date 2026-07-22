@@ -9,36 +9,48 @@ Docker로 VM에 배포한다. 데스크탑 앱과의 경계는 HTTP API 하나�
 |---|---|---|
 | `POST` | `/search` | `{ query: string, topK?: number }` → top-k 청크 + 출처 |
 | `GET` | `/status` | 문서·청크 수, 마지막 동기화 시각 |
-| `GET` | `/health` | DB·Ollama 연결 확인. 정상 200 / 이상 503 |
+| `GET` | `/health` | DB·임베딩 API 연결 확인. 정상 200 / 이상 503 |
 | `POST` | `/index?mode=full\|incremental` | 수동 색인 트리거 |
+| `POST` | `/oauth/notion/session` | 연결 세션 생성 → `{ appToken, authUrl }` 반환 |
+| `GET` | `/oauth/notion/callback` | OAuth 콜백 — 토큰 교환 후 연결 저장 |
+| `GET` | `/oauth/notion/status` | 앱 토큰의 연결 상태 확인 (`Authorization: Bearer <appToken>`) |
 
 ## 배포 절차 (Docker Compose)
 
-모노레포 루트에서 실행한다. compose가 서버 + Ollama 사이드카 + 모델 pull을 모두 처리한다.
+모노레포 루트에서 실행한다. 임베딩은 Gemini API를 쓰므로 사이드카가 없다(12단계).
 
 ```bash
-# 1. 환경 변수 준비 — 노션 키를 넣는다
+# 1. 환경 변수 준비 — 노션 OAuth 앱 정보와 Gemini API 키를 넣는다
 cp apps/server/.env.example apps/server/.env
-# NOTION_API_KEY, NOTION_ROOT_PAGE_IDS 편집
+# NOTION_OAUTH_CLIENT_ID, NOTION_OAUTH_CLIENT_SECRET, NOTION_OAUTH_REDIRECT_URI,
+# GEMINI_API_KEY(https://aistudio.google.com/apikey) 편집 — 키가 없으면 서버가 기동되지 않는다
 
 # 2. 빌드 + 기동 (기동 시 db 마이그레이션 자동 적용)
 docker compose up -d --build
-# ollama-init이 nomic-embed-text 모델(~274MB)을 최초 1회 내려받는다
 
 # 3. 헬스 체크
 curl http://localhost:8787/health
-# {"status":"ok","db":"ok","ollama":"ok"}
+# {"status":"ok","db":"ok","embedding":"ok"}
 
-# 4. 최초 전체 색인
-curl -X POST 'http://localhost:8787/index?mode=full'
+# 4. 노션 워크스페이스 연결
+#    데스크탑 앱이 자동으로 처리한다. 수동으로 할 때는 세션을 만들어 authUrl을 연다.
+curl -s -X POST http://localhost:8787/oauth/notion/session
+# → {"appToken":"...","authUrl":"https://api.notion.com/v1/oauth/authorize?..."}
+# authUrl을 브라우저에서 열고 색인할 페이지를 선택하면 연결 완료.
+# appToken은 이후 /index·/search·/status 호출 시 Authorization 헤더에 쓴다.
 
-# 5. 검색 확인
+# 5. 최초 전체 색인
+curl -X POST 'http://localhost:8787/index?mode=full' \
+  -H 'authorization: Bearer <appToken>'
+
+# 6. 검색 확인
 curl -X POST http://localhost:8787/search \
   -H 'content-type: application/json' \
+  -H 'authorization: Bearer <appToken>' \
   -d '{"query":"휴가 정책"}'
 ```
 
-- SQLite 파일은 `minutes-data` 볼륨(`/app/apps/server/data`)에, Ollama 모델은 `ollama-models` 볼륨에 영속된다.
+- SQLite 파일은 `minutes-data` 볼륨(`/app/apps/server/data`)에 영속된다.
 - 색인 이후에는 서버 내 타이머가 10분 주기로 증분 동기화한다.
 - 인증은 없다(비목표). **서버는 사내망/VPN 안에서만 연다 — 공개 인터넷 노출 금지.**
 
@@ -65,6 +77,6 @@ MINUTES_SERVER_URL=http://<서버 주소>:8787
 ```bash
 bun install
 bun run db:migrate
-bun run index:all      # NOTION_API_KEY 필요, Ollama 로컬 실행 필요
+bun run index:all      # 노션 워크스페이스 연결과 GEMINI_API_KEY 선행
 bun run dev            # http://localhost:8787
 ```
