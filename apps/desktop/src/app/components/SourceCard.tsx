@@ -1,4 +1,4 @@
-import type { Citation } from '@/core/types';
+import type { Citation } from '@minutes/core';
 
 export function SourceCard({ citation }: { citation: Citation }) {
   return (

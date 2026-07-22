@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import type { UIMessage } from 'ai';
-import type { Citation } from '@/core/types';
+import type { Citation } from '@minutes/core';
 import { ChatMessage } from './components/ChatMessage';
 import { IndexStatus } from './components/IndexStatus';
 

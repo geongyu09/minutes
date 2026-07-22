@@ -1,4 +1,4 @@
-import type { Citation } from '@/core/types';
+import type { Citation } from '@minutes/core';
 import { SourceCard } from './SourceCard';
 
 /** 답변 본문의 [출처 N] 표기를 클릭 가능한 링크로 렌더링한다. */

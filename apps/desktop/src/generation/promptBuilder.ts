@@ -1,4 +1,4 @@
-import type { PromptContext, SearchResult } from '@/core/types';
+import type { PromptContext, SearchResult } from '@minutes/core';
 
 const SYSTEM_PROMPT = `당신은 팀 문서를 찾아주는 어시스턴트입니다.
 
