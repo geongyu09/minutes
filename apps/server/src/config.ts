@@ -1,10 +1,9 @@
 export const config = {
   notion: {
-    apiKey: process.env.NOTION_API_KEY!,
-    rootPageIds: (process.env.NOTION_ROOT_PAGE_IDS ?? '')
-      .split(',')
-      .map((id) => id.trim())
-      .filter(Boolean),
+    // OAuth(Public Integration) — 2026-07-22 확정. 사용자별 액세스 토큰은 DB에 저장.
+    oauthClientId: process.env.NOTION_OAUTH_CLIENT_ID!,
+    oauthClientSecret: process.env.NOTION_OAUTH_CLIENT_SECRET!,
+    oauthRedirectUri: process.env.NOTION_OAUTH_REDIRECT_URI!,
     requestsPerSecond: 3,        // 노션 rate limit
     maxRetries: 5,
   },
