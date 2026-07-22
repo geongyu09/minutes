@@ -5,7 +5,10 @@ import { config } from '@/config';
 const limit = pLimit(1);
 let lastCallAt = 0;
 
-export const notion = new Client({ auth: config.notion.apiKey });
+/** OAuth로 발급받은 액세스 토큰으로 노션 클라이언트를 만든다. 연결(워크스페이스)마다 하나. */
+export function createNotionClient(accessToken: string): Client {
+  return new Client({ auth: accessToken });
+}
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));

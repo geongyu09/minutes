@@ -5,6 +5,7 @@ export interface NotionConnection {
   id: string;
   status: 'pending' | 'connected';
   accessToken?: string;
+  refreshToken?: string;
   workspaceId?: string;
   workspaceName?: string;
 }
@@ -28,6 +29,7 @@ interface ConnectionRow {
   id: string;
   status: 'pending' | 'connected';
   access_token: string | null;
+  refresh_token: string | null;
   workspace_id: string | null;
   workspace_name: string | null;
 }
@@ -41,6 +43,7 @@ function toConnection(row: ConnectionRow): NotionConnection {
     id: row.id,
     status: row.status,
     accessToken: row.access_token ?? undefined,
+    refreshToken: row.refresh_token ?? undefined,
     workspaceId: row.workspace_id ?? undefined,
     workspaceName: row.workspace_name ?? undefined,
   };
@@ -76,7 +79,7 @@ export function completeConnection(state: string, grant: WorkspaceGrant): Notion
          workspace_icon = ?,
          updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
        WHERE oauth_state = ?
-       RETURNING id, status, access_token, workspace_id, workspace_name`
+       RETURNING id, status, access_token, refresh_token, workspace_id, workspace_name`
     )
     .get(
       grant.accessToken,
@@ -95,7 +98,7 @@ export function completeConnection(state: string, grant: WorkspaceGrant): Notion
 export function findByAppToken(appToken: string): NotionConnection | null {
   const row = db()
     .prepare(
-      `SELECT id, status, access_token, workspace_id, workspace_name
+      `SELECT id, status, access_token, refresh_token, workspace_id, workspace_name
        FROM notion_connections WHERE app_token_hash = ?`
     )
     .get(hashToken(appToken)) as ConnectionRow | undefined;
@@ -117,7 +120,7 @@ export function updateConnectionTokens(connectionId: string, grant: WorkspaceGra
 export function listConnected(): NotionConnection[] {
   const rows = db()
     .prepare(
-      `SELECT id, status, access_token, workspace_id, workspace_name
+      `SELECT id, status, access_token, refresh_token, workspace_id, workspace_name
        FROM notion_connections WHERE status = 'connected'`
     )
     .all() as ConnectionRow[];
