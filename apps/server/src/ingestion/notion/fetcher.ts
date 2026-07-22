@@ -1,5 +1,5 @@
-import { config } from '@/config';
-import { notion, throttled } from './client';
+import type { Client } from '@notionhq/client';
+import { throttled } from './client';
 
 export interface PageRef {
   id: string;
@@ -27,18 +27,17 @@ function extractTitle(page: Record<string, any>): string {
   return '(제목 없음)';
 }
 
-function toPageRef(page: Record<string, any>, parentTitle?: string): PageRef {
+function toPageRef(page: Record<string, any>): PageRef {
   return {
     id: page.id,
     title: extractTitle(page),
     url: page.url,
     lastEditedTime: page.last_edited_time,
-    parentTitle,
   };
 }
 
 /** 페이지네이션을 처리하며 블록 자식을 전부 가져온다. child_page는 재귀에서 제외(별도 문서). */
-export async function listAllBlocks(blockId: string, depth = 0): Promise<BlockNode[]> {
+export async function listAllBlocks(client: Client, blockId: string, depth = 0): Promise<BlockNode[]> {
   if (depth > 10) return [];
 
   const blocks: BlockNode[] = [];
@@ -46,12 +45,12 @@ export async function listAllBlocks(blockId: string, depth = 0): Promise<BlockNo
 
   do {
     const res: any = await throttled(() =>
-      notion.blocks.children.list({ block_id: blockId, start_cursor: cursor, page_size: 100 })
+      client.blocks.children.list({ block_id: blockId, start_cursor: cursor, page_size: 100 })
     );
     for (const block of res.results as any[]) {
       const node: BlockNode = { ...block, children: [] };
       if (block.has_children && block.type !== 'child_page') {
-        node.children = await listAllBlocks(block.id, depth + 1);
+        node.children = await listAllBlocks(client, block.id, depth + 1);
       }
       blocks.push(node);
     }
@@ -61,48 +60,27 @@ export async function listAllBlocks(blockId: string, depth = 0): Promise<BlockNo
   return blocks;
 }
 
-async function queryDatabase(databaseId: string): Promise<{ id: string }[]> {
-  const rows: { id: string }[] = [];
+/**
+ * 이 연결이 접근 가능한 모든 페이지 메타데이터를 수집한다.
+ * OAuth 설치 시 사용자가 공유한 페이지(와 그 하위)가 search API로 전부 열거된다.
+ */
+export async function listAllPages(client: Client): Promise<PageRef[]> {
+  const pages: PageRef[] = [];
   let cursor: string | undefined;
 
   do {
     const res: any = await throttled(() =>
-      notion.databases.query({ database_id: databaseId, start_cursor: cursor, page_size: 100 })
+      client.search({
+        filter: { property: 'object', value: 'page' },
+        start_cursor: cursor,
+        page_size: 100,
+      })
     );
-    rows.push(...res.results.map((r: any) => ({ id: r.id })));
+    for (const page of res.results as any[]) {
+      if (page.object === 'page') pages.push(toPageRef(page));
+    }
     cursor = res.has_more ? res.next_cursor ?? undefined : undefined;
   } while (cursor);
 
-  return rows;
-}
-
-/** 루트 페이지 아래를 BFS로 순회해 모든 페이지 메타데이터를 수집한다. */
-export async function listAllPages(): Promise<PageRef[]> {
-  const pages: PageRef[] = [];
-  const queue: { id: string; parentTitle?: string }[] = config.notion.rootPageIds.map((id) => ({ id }));
-  const visited = new Set<string>();
-
-  while (queue.length > 0) {
-    const { id: pageId, parentTitle } = queue.shift()!;
-    if (visited.has(pageId)) continue;
-    visited.add(pageId);
-
-    const page: any = await throttled(() => notion.pages.retrieve({ page_id: pageId }));
-    const ref = toPageRef(page, parentTitle);
-    pages.push(ref);
-
-    const children = await listAllBlocks(pageId);
-    for (const block of flatten(children)) {
-      if (block.type === 'child_page') queue.push({ id: block.id, parentTitle: ref.title });
-      if (block.type === 'child_database') {
-        const rows = await queryDatabase(block.id);
-        queue.push(...rows.map((r) => ({ id: r.id, parentTitle: ref.title })));
-      }
-    }
-  }
   return pages;
-}
-
-function flatten(blocks: BlockNode[]): BlockNode[] {
-  return blocks.flatMap((b) => [b, ...flatten(b.children)]);
 }
