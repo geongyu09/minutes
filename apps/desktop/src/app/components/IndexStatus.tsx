@@ -1,6 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { config } from '@/config';
+import { serverFetch } from '@/serverFetch';
+import { authHeaders } from '@/notionAuth';
 
 interface Status {
   documentCount: number;
@@ -20,7 +23,7 @@ export function IndexStatus() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch('/api/status');
+      const res = await serverFetch(`${config.server.baseUrl}/status`, { headers: authHeaders() });
       if (res.ok) setStatus(await res.json());
     } catch {
       // 상태 표시는 부가 기능 — 실패해도 채팅은 동작한다
@@ -34,7 +37,10 @@ export function IndexStatus() {
   const reindex = async () => {
     setIndexing(true);
     try {
-      await fetch('/api/index?mode=incremental', { method: 'POST' });
+      await serverFetch(`${config.server.baseUrl}/index?mode=incremental`, {
+        method: 'POST',
+        headers: authHeaders(),
+      });
       await load();
     } finally {
       setIndexing(false);

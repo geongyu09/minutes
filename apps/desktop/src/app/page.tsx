@@ -4,8 +4,10 @@ import { useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import type { UIMessage } from 'ai';
 import type { Citation } from '@minutes/core';
+import { createChatTransport } from '@/generation/chatTransport';
 import { ChatMessage } from './components/ChatMessage';
 import { IndexStatus } from './components/IndexStatus';
+import { NotionConnect } from './components/NotionConnect';
 
 function textOf(message: UIMessage): string {
   return message.parts
@@ -20,7 +22,9 @@ function citationsOf(message: UIMessage): Citation[] {
 }
 
 export default function ChatPage() {
-  const { messages, sendMessage, status } = useChat();
+  // 생성 파이프라인은 서버가 아니라 웹뷰 안에서 실행된다 (Tauri 정적 export)
+  const [transport] = useState(() => createChatTransport());
+  const { messages, sendMessage, status } = useChat({ transport });
   const [input, setInput] = useState('');
   const busy = status === 'submitted' || status === 'streaming';
 
@@ -36,6 +40,7 @@ export default function ChatPage() {
     <div className="container">
       <header className="header">
         <h1>minutes</h1>
+        <NotionConnect />
         <IndexStatus />
       </header>
 
