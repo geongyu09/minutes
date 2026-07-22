@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 670" width="940" height="670" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+  <rect width="940" height="670" fill="#ffffff"/>
+  <defs>
+    <marker id="arrow3" markerWidth="10" markerHeight="10" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <text x="24" y="38" font-size="16" font-weight="700" fill="#0f172a">하이브리드 검색 — 두 갈래로 찾고 하나로 합칩니다</text>
+  <text x="24" y="60" font-size="12.5" fill="#475569">의미가 비슷한 조각과 단어가 겹치는 조각을 따로 찾은 뒤, 순위를 섞어 최종 8개를 고릅니다.</text>
+
+  <!-- 질문 -->
+  <rect x="330" y="82" width="280" height="58" rx="10" fill="#ffffff" stroke="#3b82f6" stroke-width="2"/>
+  <text x="470" y="108" font-size="13.5" font-weight="700" fill="#1d4ed8" text-anchor="middle">질문</text>
+  <text x="470" y="128" font-size="12" fill="#475569" text-anchor="middle">"지난달 배포 이슈 어떻게 정리됐죠?"</text>
+
+  <line x1="400" y1="142" x2="252" y2="182" stroke="#64748b" stroke-width="1.6" marker-end="url(#arrow3)"/>
+  <line x1="540" y1="142" x2="688" y2="182" stroke="#64748b" stroke-width="1.6" marker-end="url(#arrow3)"/>
+
+  <!-- 의미 검색 -->
+  <rect x="80" y="186" width="340" height="136" rx="10" fill="#ffffff" stroke="#0ea5e9" stroke-width="2"/>
+  <text x="102" y="214" font-size="13.5" font-weight="700" fill="#0369a1">의미 검색 (벡터)</text>
+  <text x="102" y="240" font-size="12" fill="#475569">질문을 같은 임베딩 모델로 벡터화</text>
+  <text x="102" y="262" font-size="12" fill="#475569">코사인 유사도로 가까운 조각 검색</text>
+  <text x="102" y="284" font-size="12" fill="#475569">표현이 달라도 뜻이 통하면 찾습니다</text>
+  <text x="102" y="308" font-size="12" font-weight="700" fill="#0369a1">상위 16개</text>
+
+  <!-- 키워드 검색 -->
+  <rect x="520" y="186" width="340" height="136" rx="10" fill="#ffffff" stroke="#0ea5e9" stroke-width="2"/>
+  <text x="542" y="214" font-size="13.5" font-weight="700" fill="#0369a1">키워드 검색 (FTS5)</text>
+  <text x="542" y="240" font-size="12" fill="#475569">질문을 공백으로 잘라 단어로 사용</text>
+  <text x="542" y="262" font-size="12" fill="#475569">모든 단어가 들어간 조각을 검색</text>
+  <text x="542" y="284" font-size="12" fill="#b45309">조사가 붙은 어절은 잘 안 맞습니다</text>
+  <text x="542" y="308" font-size="12" font-weight="700" fill="#0369a1">상위 16개</text>
+
+  <line x1="250" y1="326" x2="380" y2="364" stroke="#64748b" stroke-width="1.6" marker-end="url(#arrow3)"/>
+  <line x1="690" y1="326" x2="560" y2="364" stroke="#64748b" stroke-width="1.6" marker-end="url(#arrow3)"/>
+
+  <!-- RRF -->
+  <rect x="250" y="368" width="440" height="106" rx="10" fill="#f8fafc" stroke="#3b82f6" stroke-width="2"/>
+  <text x="470" y="396" font-size="13.5" font-weight="700" fill="#1d4ed8" text-anchor="middle">RRF로 합치기</text>
+  <text x="470" y="420" font-size="12" fill="#475569" text-anchor="middle">점수가 아니라 각 갈래의 순위만 사용합니다</text>
+  <text x="470" y="442" font-size="12" fill="#475569" text-anchor="middle">가중치 — 의미 검색 0.7 / 키워드 검색 0.3</text>
+  <text x="470" y="464" font-size="12" fill="#475569" text-anchor="middle">양쪽에서 모두 상위인 조각이 가장 유리합니다</text>
+
+  <line x1="470" y1="478" x2="470" y2="508" stroke="#64748b" stroke-width="1.6" marker-end="url(#arrow3)"/>
+
+  <!-- 최종 -->
+  <rect x="300" y="512" width="340" height="64" rx="10" fill="#ffffff" stroke="#10b981" stroke-width="2"/>
+  <text x="470" y="540" font-size="13.5" font-weight="700" fill="#047857" text-anchor="middle">최종 상위 8개 조각</text>
+  <text x="470" y="562" font-size="12" fill="#475569" text-anchor="middle">이 8개만 답변 생성에 쓰입니다</text>
+
+  <rect x="24" y="600" width="892" height="46" rx="8" fill="#f8fafc" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="44" y="628" font-size="12" fill="#b45309">리랭킹(재정렬) 단계는 꺼져 있습니다. 합쳐진 순서에서 위 8개를 그대로 자를 뿐, 추가로 다시 매기지 않습니다.</text>
+</svg>

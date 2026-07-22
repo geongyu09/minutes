@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 330" width="900" height="330" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif">
+  <rect width="900" height="330" fill="#ffffff"/>
+  <defs>
+    <marker id="m" markerWidth="10" markerHeight="10" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <!-- 처음이라면 -->
+  <text x="32" y="40" font-size="13" font-weight="700" fill="#1d4ed8">처음이라면 — 이 순서로 읽으세요</text>
+
+  <rect x="32" y="56" width="186" height="70" rx="10" fill="#ffffff" stroke="#3b82f6" stroke-width="2"/>
+  <text x="48" y="82" font-size="13.5" font-weight="700" fill="#1d4ed8">01 시작하기</text>
+  <text x="48" y="103" font-size="11.5" fill="#475569">앱 설치 · 코딩 CLI</text>
+  <text x="48" y="119" font-size="11.5" fill="#475569">서버 주소 설정</text>
+
+  <rect x="248" y="56" width="186" height="70" rx="10" fill="#ffffff" stroke="#3b82f6" stroke-width="2"/>
+  <text x="264" y="82" font-size="13.5" font-weight="700" fill="#1d4ed8">02 노션 연결</text>
+  <text x="264" y="103" font-size="11.5" fill="#475569">워크스페이스 연결</text>
+  <text x="264" y="119" font-size="11.5" fill="#475569">공유할 페이지 선택</text>
+
+  <rect x="464" y="56" width="186" height="70" rx="10" fill="#ffffff" stroke="#3b82f6" stroke-width="2"/>
+  <text x="480" y="82" font-size="13.5" font-weight="700" fill="#1d4ed8">03 질문과 답변</text>
+  <text x="480" y="103" font-size="11.5" fill="#475569">질문하는 법</text>
+  <text x="480" y="119" font-size="11.5" fill="#475569">출처 읽는 법</text>
+
+  <rect x="680" y="56" width="186" height="70" rx="10" fill="#ffffff" stroke="#3b82f6" stroke-width="2"/>
+  <text x="696" y="82" font-size="13.5" font-weight="700" fill="#1d4ed8">04 색인과 최신화</text>
+  <text x="696" y="103" font-size="11.5" fill="#475569">10분 주기 반영</text>
+  <text x="696" y="119" font-size="11.5" fill="#475569">색인 안 되는 것들</text>
+
+  <line x1="218" y1="91" x2="244" y2="91" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#m)"/>
+  <line x1="434" y1="91" x2="460" y2="91" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#m)"/>
+  <line x1="650" y1="91" x2="676" y2="91" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#m)"/>
+
+  <!-- 더 알고 싶다면 -->
+  <text x="32" y="180" font-size="13" font-weight="700" fill="#0369a1">더 알고 싶다면</text>
+
+  <rect x="32" y="196" width="402" height="70" rx="10" fill="#f8fafc" stroke="#0ea5e9" stroke-width="1.8"/>
+  <text x="48" y="222" font-size="13.5" font-weight="700" fill="#0369a1">05 동작 원리</text>
+  <text x="48" y="243" font-size="11.5" fill="#475569">회의록이 조각나고 검색되어 답변이 되기까지</text>
+  <text x="48" y="259" font-size="11.5" fill="#475569">청킹 · 하이브리드 검색 · 프롬프트 구성</text>
+
+  <rect x="464" y="196" width="402" height="70" rx="10" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.8"/>
+  <text x="480" y="222" font-size="13.5" font-weight="700" fill="#b45309">08 한계와 개인정보</text>
+  <text x="480" y="243" font-size="11.5" fill="#92400e">회의록 본문이 어디까지 나가는지</text>
+  <text x="480" y="259" font-size="11.5" fill="#92400e">아직 못 하는 일 · 답을 믿어도 될 때</text>
+
+  <!-- 막혔다면 -->
+  <text x="32" y="300" font-size="13" font-weight="700" fill="#0f172a">막혔다면</text>
+
+  <rect x="126" y="282" width="308" height="30" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="142" y="302" font-size="12.5" fill="#0f172a">06 문제 해결 — 증상별 대처와 에러 사전</text>
+
+  <rect x="464" y="282" width="402" height="30" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="480" y="302" font-size="12.5" fill="#0f172a">07 서버 운영 — 팀 서버를 직접 띄우는 사람을 위한 문서</text>
+</svg>

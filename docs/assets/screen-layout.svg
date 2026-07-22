@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 580" width="860" height="580" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+  <rect width="860" height="580" fill="#ffffff"/>
+  <defs>
+    <marker id="sl-arrow" markerWidth="10" markerHeight="10" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <text x="32" y="28" font-size="15" font-weight="700" fill="#0f172a">minutes 앱 화면 구성</text>
+
+  <!-- 앱 창 -->
+  <rect x="32" y="40" width="480" height="500" rx="14" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5"/>
+
+  <!-- 헤더 -->
+  <path d="M32 54 a14 14 0 0 1 14 -14 h452 a14 14 0 0 1 14 14 v58 h-480 z" fill="#f8fafc"/>
+  <line x1="32" y1="112" x2="512" y2="112" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="52" y="70" font-size="16" font-weight="700" fill="#0f172a">minutes</text>
+
+  <rect x="52" y="80" width="92" height="24" rx="12" fill="#ffffff" stroke="#10b981" stroke-width="1.5"/>
+  <text x="62" y="97" font-size="11.5" fill="#0f172a">노션 연결됨</text>
+
+  <text x="158" y="97" font-size="11.5" fill="#475569">문서 42 · 청크 318 · 10:20</text>
+
+  <rect x="396" y="79" width="66" height="26" rx="8" fill="#ffffff" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="410" y="97" font-size="12" fill="#1d4ed8">재색인</text>
+
+  <!-- 내 질문 말풍선 -->
+  <rect x="232" y="136" width="228" height="36" rx="10" fill="#3b82f6"/>
+  <text x="248" y="159" font-size="12.5" fill="#ffffff">로그인 방식은 뭘로 정했지?</text>
+
+  <!-- 답변 말풍선 -->
+  <rect x="52" y="188" width="340" height="62" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="68" y="214" font-size="12.5" fill="#0f172a">이메일 + 비밀번호 방식으로 정했습니다 <tspan fill="#0ea5e9">[출처 1]</tspan></text>
+  <text x="68" y="234" font-size="12.5" fill="#0f172a">소셜 로그인은 다음 스코프입니다 <tspan fill="#0ea5e9">[출처 2]</tspan></text>
+
+  <!-- 출처 카드 -->
+  <rect x="52" y="266" width="340" height="46" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="68" y="288" font-size="12" fill="#0f172a"><tspan fill="#0ea5e9">[출처 1]</tspan> 7월 2주차 스프린트 회의</text>
+  <text x="68" y="305" font-size="11" fill="#475569">로그인 &gt; 인증 방식 결정</text>
+
+  <rect x="52" y="320" width="340" height="46" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="68" y="342" font-size="12" fill="#0f172a"><tspan fill="#0ea5e9">[출처 2]</tspan> 인증 스펙 정리</text>
+  <text x="68" y="359" font-size="11" fill="#475569">범위 &gt; 다음 스코프</text>
+
+  <!-- 대기 표시 -->
+  <text x="52" y="404" font-size="12" fill="#475569">회의록 8건을 참고해 답변을 작성하고 있어요</text>
+  <circle cx="332" cy="400" r="3" fill="#94a3b8"/>
+  <circle cx="344" cy="400" r="3" fill="#94a3b8"/>
+  <circle cx="356" cy="400" r="3" fill="#94a3b8"/>
+
+  <!-- 에러 배너 -->
+  <rect x="52" y="424" width="340" height="30" rx="8" fill="#ffffff" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="68" y="444" font-size="11.5" fill="#0f172a">답변 생성 실패: (오류 메시지)</text>
+
+  <!-- 입력 영역 -->
+  <path d="M32 476 h480 v50 a14 14 0 0 1 -14 14 h-452 a14 14 0 0 1 -14 -14 z" fill="#f8fafc"/>
+  <line x1="32" y1="476" x2="512" y2="476" stroke="#cbd5e1" stroke-width="1.5"/>
+  <rect x="52" y="492" width="336" height="32" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="66" y="513" font-size="12" fill="#94a3b8">질문을 입력하세요</text>
+  <rect x="400" y="492" width="88" height="32" rx="8" fill="#3b82f6"/>
+  <text x="431" y="513" font-size="12.5" fill="#ffffff">전송</text>
+
+  <!-- 설명 -->
+  <line x1="532" y1="90" x2="516" y2="90" stroke="#64748b" stroke-width="1.4" marker-end="url(#sl-arrow)"/>
+  <text x="540" y="82" font-size="12" fill="#0f172a" font-weight="700">헤더</text>
+  <text x="540" y="100" font-size="11.5" fill="#475569">제목, 노션 연결 상태, 색인 상태,</text>
+  <text x="540" y="117" font-size="11.5" fill="#475569">재색인 버튼</text>
+
+  <line x1="532" y1="154" x2="516" y2="154" stroke="#64748b" stroke-width="1.4" marker-end="url(#sl-arrow)"/>
+  <text x="540" y="150" font-size="12" fill="#0f172a" font-weight="700">내 질문</text>
+  <text x="540" y="168" font-size="11.5" fill="#475569">오른쪽에 붙는 말풍선</text>
+
+  <line x1="532" y1="216" x2="516" y2="216" stroke="#64748b" stroke-width="1.4" marker-end="url(#sl-arrow)"/>
+  <text x="540" y="212" font-size="12" fill="#0f172a" font-weight="700">답변</text>
+  <text x="540" y="230" font-size="11.5" fill="#475569">글자가 생성되는 대로 표시되고,</text>
+  <text x="540" y="247" font-size="11.5" fill="#475569">[출처 N]을 누르면 노션이 열립니다</text>
+
+  <line x1="532" y1="300" x2="516" y2="300" stroke="#64748b" stroke-width="1.4" marker-end="url(#sl-arrow)"/>
+  <text x="540" y="296" font-size="12" fill="#0f172a" font-weight="700">출처 카드</text>
+  <text x="540" y="314" font-size="11.5" fill="#475569">답변이 끝난 뒤 한꺼번에 나타납니다.</text>
+  <text x="540" y="331" font-size="11.5" fill="#475569">문서 제목과 헤딩 경로가 보입니다</text>
+
+  <line x1="532" y1="400" x2="516" y2="400" stroke="#64748b" stroke-width="1.4" marker-end="url(#sl-arrow)"/>
+  <text x="540" y="396" font-size="12" fill="#0f172a" font-weight="700">대기 문구</text>
+  <text x="540" y="414" font-size="11.5" fill="#475569">답변 첫 글자가 나올 때까지</text>
+  <text x="540" y="431" font-size="11.5" fill="#475569">단계에 맞춰 바뀝니다</text>
+
+  <line x1="532" y1="508" x2="516" y2="508" stroke="#64748b" stroke-width="1.4" marker-end="url(#sl-arrow)"/>
+  <text x="540" y="504" font-size="12" fill="#0f172a" font-weight="700">입력창과 전송 버튼</text>
+  <text x="540" y="522" font-size="11.5" fill="#475569">답변을 만드는 동안에는</text>
+  <text x="540" y="539" font-size="11.5" fill="#475569">둘 다 비활성화됩니다</text>
+</svg>

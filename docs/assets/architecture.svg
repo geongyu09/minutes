@@ -37,7 +37,7 @@
   <text x="412" y="234" font-size="12.5" fill="#475569">질문과 가장 가까운 조각 찾기</text>
 
   <rect x="392" y="272" width="224" height="76" rx="10" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5"/>
-  <text x="412" y="300" font-size="14" font-weight="700" fill="#0f172a">PostgreSQL + pgvector</text>
+  <text x="412" y="300" font-size="14" font-weight="700" fill="#0f172a">SQLite (벡터 + 키워드 색인)</text>
   <text x="412" y="322" font-size="12.5" fill="#475569">회의록 조각과 벡터 보관</text>
   <text x="412" y="340" font-size="12.5" fill="#475569">연결(사용자)별로 분리</text>
 
