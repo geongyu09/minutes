@@ -5,8 +5,9 @@ import {
   completeConnection,
   createPendingConnection,
   findByAppToken,
-  hasPendingState,
+  hasOauthState,
   listConnected,
+  startReconnect,
   updateConnectionTokens,
 } from './connections';
 
@@ -73,27 +74,87 @@ describe('createPendingConnection', () => {
   });
 });
 
-describe('hasPendingState', () => {
+describe('hasOauthState', () => {
   it('발급된 state는 true, 완료되었거나 모르는 state는 false', () => {
     const session = createPendingConnection();
 
-    expect(hasPendingState(session.state)).toBe(true);
-    expect(hasPendingState('unknown-state')).toBe(false);
+    expect(hasOauthState(session.state)).toBe(true);
+    expect(hasOauthState('unknown-state')).toBe(false);
 
     completeConnection(session.state, workspace);
-    expect(hasPendingState(session.state)).toBe(false);
+    expect(hasOauthState(session.state)).toBe(false);
+  });
+
+  it('연결 변경으로 발급된 state도 true (이미 connected여도 인가 진행 중)', () => {
+    const session = createPendingConnection();
+    completeConnection(session.state, workspace);
+    const state = startReconnect(session.connectionId);
+
+    expect(hasOauthState(state!)).toBe(true);
+  });
+});
+
+describe('startReconnect', () => {
+  it('connected 연결에 새 state를 발급하되 연결 자체는 살려둔다', () => {
+    const session = createPendingConnection();
+    completeConnection(session.state, workspace);
+
+    const state = startReconnect(session.connectionId);
+
+    expect(state).toBeTruthy();
+    expect(state).not.toBe(session.state);
+
+    // 인가가 끝나기 전에도 기존 워크스페이스로 검색·색인이 계속되어야 한다
+    const found = findByAppToken(session.appToken);
+    expect(found?.status).toBe('connected');
+    expect(found?.accessToken).toBe(workspace.accessToken);
+    expect(found?.reconnecting).toBe(true);
+  });
+
+  it('모르는 연결이면 null', () => {
+    expect(startReconnect('no-such-connection')).toBeNull();
+  });
+
+  it('재연결이 완료되면 새 워크스페이스로 바뀌고 reconnecting이 꺼진다', () => {
+    const session = createPendingConnection();
+    completeConnection(session.state, workspace);
+    const state = startReconnect(session.connectionId)!;
+
+    const result = completeConnection(state, {
+      accessToken: 'other-access-token',
+      workspaceId: 'ws-2',
+      workspaceName: '다른 팀',
+    });
+
+    expect(result?.workspaceChanged).toBe(true);
+    const found = findByAppToken(session.appToken);
+    expect(found?.workspaceName).toBe('다른 팀');
+    expect(found?.accessToken).toBe('other-access-token');
+    expect(found?.reconnecting).toBe(false);
+  });
+
+  it('같은 워크스페이스를 다시 고르면 workspaceChanged=false (색인 데이터 유지 판단용)', () => {
+    const session = createPendingConnection();
+    completeConnection(session.state, workspace);
+    const state = startReconnect(session.connectionId)!;
+
+    const result = completeConnection(state, { ...workspace, accessToken: 'refreshed' });
+
+    expect(result?.workspaceChanged).toBe(false);
   });
 });
 
 describe('completeConnection', () => {
   it('state로 세션을 찾아 노션 토큰·워크스페이스 정보를 저장하고 connected로 바꾼다', () => {
     const session = createPendingConnection();
-    const connection = completeConnection(session.state, workspace);
+    const result = completeConnection(session.state, workspace);
+    const connection = result?.connection;
 
     expect(connection?.id).toBe(session.connectionId);
     expect(connection?.status).toBe('connected');
     expect(connection?.accessToken).toBe(workspace.accessToken);
     expect(connection?.workspaceName).toBe('우리 팀');
+    expect(result?.workspaceChanged).toBe(true); // 최초 연결도 "빈 상태 → 워크스페이스" 변경
   });
 
   it('알 수 없는 state면 null을 반환한다', () => {

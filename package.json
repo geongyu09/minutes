@@ -5,6 +5,8 @@
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "dev": "bun run --cwd apps/desktop dev",
+    "tauri:dev": "bun run --cwd apps/desktop tauri:dev",
+    "tauri:build": "bun run --cwd apps/desktop tauri:build",
     "server:dev": "bun run --cwd apps/server dev",
     "test": "bun run --cwd apps/server test && bun run --cwd apps/desktop test",
     "typecheck": "bun run --cwd apps/server typecheck && bun run --cwd apps/desktop typecheck && bun run --cwd packages/core typecheck",

@@ -176,3 +176,60 @@ body {
   margin-top: 80px;
   font-size: 14px;
 }
+
+.message.pending {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.pending-label {
+  animation: pending-fade-in 0.3s ease-out;
+}
+
+@keyframes pending-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.pending-dots {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.pending-dots i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  animation: pending-bounce 1.2s ease-in-out infinite;
+}
+
+.pending-dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.pending-dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes pending-bounce {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: none;
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}

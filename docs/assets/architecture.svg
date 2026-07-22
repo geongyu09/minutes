@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 420" width="880" height="420" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif">
+  <rect width="880" height="420" fill="#ffffff"/>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <!-- 사용자 기기 -->
+  <rect x="24" y="40" width="300" height="340" rx="14" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="44" y="70" font-size="14" font-weight="700" fill="#0f172a">내 컴퓨터</text>
+
+  <rect x="48" y="90" width="252" height="96" rx="10" fill="#ffffff" stroke="#3b82f6" stroke-width="2"/>
+  <text x="68" y="118" font-size="15" font-weight="700" fill="#1d4ed8">minutes 데스크톱 앱</text>
+  <text x="68" y="142" font-size="12.5" fill="#475569">· 노션 연결 버튼</text>
+  <text x="68" y="162" font-size="12.5" fill="#475569">· 질문 입력 · 답변 · 출처 카드</text>
+
+  <rect x="48" y="212" width="252" height="80" rx="10" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="68" y="240" font-size="14" font-weight="700" fill="#0f172a">코딩 CLI (claude / codex / gemini)</text>
+  <text x="68" y="262" font-size="12.5" fill="#475569">답변 문장을 생성하는 LLM</text>
+  <text x="68" y="280" font-size="12.5" fill="#475569">— 내 기기에서 실행</text>
+
+  <text x="48" y="330" font-size="12" fill="#64748b">회의록 본문은 답변을 만들 때만</text>
+  <text x="48" y="348" font-size="12" fill="#64748b">이 CLI로 전달됩니다.</text>
+
+  <!-- 서버 -->
+  <rect x="368" y="40" width="272" height="340" rx="14" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="388" y="70" font-size="14" font-weight="700" fill="#0f172a">중앙 서버 (팀 공용)</text>
+
+  <rect x="392" y="90" width="224" height="76" rx="10" fill="#ffffff" stroke="#0ea5e9" stroke-width="2"/>
+  <text x="412" y="118" font-size="14" font-weight="700" fill="#0369a1">색인 파이프라인</text>
+  <text x="412" y="140" font-size="12.5" fill="#475569">노션 페이지 → 조각내기</text>
+  <text x="412" y="158" font-size="12.5" fill="#475569">→ 임베딩 → 저장</text>
+
+  <rect x="392" y="184" width="224" height="70" rx="10" fill="#ffffff" stroke="#0ea5e9" stroke-width="2"/>
+  <text x="412" y="212" font-size="14" font-weight="700" fill="#0369a1">검색 API</text>
+  <text x="412" y="234" font-size="12.5" fill="#475569">질문과 가장 가까운 조각 찾기</text>
+
+  <rect x="392" y="272" width="224" height="76" rx="10" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="412" y="300" font-size="14" font-weight="700" fill="#0f172a">PostgreSQL + pgvector</text>
+  <text x="412" y="322" font-size="12.5" fill="#475569">회의록 조각과 벡터 보관</text>
+  <text x="412" y="340" font-size="12.5" fill="#475569">연결(사용자)별로 분리</text>
+
+  <!-- 외부 서비스 -->
+  <rect x="684" y="90" width="172" height="86" rx="10" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="704" y="118" font-size="14" font-weight="700" fill="#0f172a">Notion</text>
+  <text x="704" y="140" font-size="12.5" fill="#475569">내가 연결을 허용한</text>
+  <text x="704" y="158" font-size="12.5" fill="#475569">페이지만 읽습니다</text>
+
+  <rect x="684" y="200" width="172" height="86" rx="10" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="704" y="228" font-size="14" font-weight="700" fill="#0f172a">임베딩 API</text>
+  <text x="704" y="250" font-size="12.5" fill="#475569">문장을 숫자 벡터로</text>
+  <text x="704" y="268" font-size="12.5" fill="#475569">바꿔주는 외부 모델</text>
+
+  <!-- 화살표 -->
+  <line x1="300" y1="132" x2="388" y2="132" stroke="#64748b" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text x="306" y="124" font-size="11.5" fill="#475569">질문 / 연결 요청</text>
+
+  <line x1="388" y1="222" x2="302" y2="222" stroke="#64748b" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text x="306" y="240" font-size="11.5" fill="#475569">회의록 조각 + 원문 링크</text>
+
+  <line x1="616" y1="118" x2="680" y2="118" stroke="#64748b" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <line x1="616" y1="146" x2="680" y2="230" stroke="#64748b" stroke-width="1.6" marker-end="url(#arrow)"/>
+
+  <line x1="504" y1="166" x2="504" y2="180" stroke="#64748b" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <line x1="504" y1="254" x2="504" y2="268" stroke="#64748b" stroke-width="1.6" marker-end="url(#arrow)"/>
+</svg>
