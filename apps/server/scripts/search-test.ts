@@ -2,7 +2,8 @@
  * 검색만 따로 테스트하는 CLI.
  * 사용법: bun run search "로그인 방식 뭐로 정했지?" [--topK 8] [--no-hybrid]
  */
-import { retriever } from '../src/retrieval/retriever';
+import { createRetriever } from '../src/retrieval/retriever';
+import { listConnected } from '../src/oauth/connections';
 import { closeDb } from '../src/db';
 
 async function main() {
@@ -12,6 +13,13 @@ async function main() {
     console.error('사용법: bun run search "질문" [--topK 8] [--no-hybrid]');
     process.exit(1);
   }
+
+  const connections = listConnected();
+  if (connections.length === 0) {
+    console.error('연결된 노션 워크스페이스가 없습니다. 앱에서 노션을 먼저 연결하세요.');
+    process.exit(1);
+  }
+  const retriever = createRetriever(connections[0].id);
 
   const topKIndex = args.indexOf('--topK');
   const topK = topKIndex >= 0 ? Number(args[topKIndex + 1]) : undefined;

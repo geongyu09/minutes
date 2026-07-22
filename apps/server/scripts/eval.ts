@@ -3,7 +3,8 @@
  * 사용법: bun run eval [--topK 8] [--no-hybrid]
  * 목표: 평균 Recall@8 ≥ 0.8 (4단계 관문)
  */
-import { retriever } from '../src/retrieval/retriever';
+import { createRetriever } from '../src/retrieval/retriever';
+import { listConnected } from '../src/oauth/connections';
 import { evalSet } from '../eval/dataset';
 import { recallAtK } from '../eval/metrics';
 import { closeDb } from '../src/db';
@@ -13,6 +14,13 @@ async function main() {
   const topKIndex = args.indexOf('--topK');
   const topK = topKIndex >= 0 ? Number(args[topKIndex + 1]) : 8;
   const useHybrid = !args.includes('--no-hybrid');
+
+  const connections = listConnected();
+  if (connections.length === 0) {
+    console.error('연결된 노션 워크스페이스가 없습니다. 앱에서 노션을 먼저 연결하세요.');
+    process.exit(1);
+  }
+  const retriever = createRetriever(connections[0].id);
 
   if (evalSet.length === 0) {
     console.error('평가 세트가 비어 있습니다. eval/dataset.ts에 질문-정답 쌍을 채워주세요.');
