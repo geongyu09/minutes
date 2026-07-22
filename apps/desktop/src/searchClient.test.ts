@@ -20,6 +20,22 @@ describe('createSearchClient', () => {
     expect(results[0].chunk.id).toBe('a');
   });
 
+  it('앱 토큰이 있으면 Bearer 헤더로 보낸다', async () => {
+    let captured: { init?: RequestInit } | undefined;
+    const client = createSearchClient(
+      'http://server:8787',
+      async (_url, init) => {
+        captured = { init };
+        return okResponse({ results: [], tookMs: 1 });
+      },
+      () => 'app-token',
+    );
+
+    await client.search('q');
+
+    expect((captured?.init?.headers as Record<string, string>).authorization).toBe('Bearer app-token');
+  });
+
   it('서버가 오류를 반환하면 예외를 던진다', async () => {
     const client = createSearchClient('http://server:8787', async () =>
       new Response(JSON.stringify({ error: '실패' }), { status: 500 }),
