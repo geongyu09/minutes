@@ -132,9 +132,10 @@ export function createVectorStore(connectionId: string): VectorStore {
            ) v
            JOIN chunks c ON c.rowid = v.rowid
            JOIN documents d ON d.connection_id = c.connection_id AND d.id = c.document_id
+           WHERE c.connection_id = ?
            ORDER BY v.distance`
         )
-        .all(toVecBlob(vector), topK, connectionId) as ChunkRow[];
+        .all(toVecBlob(vector), topK, connectionId, connectionId) as ChunkRow[];
       return rows.map((row) => toSearchResult(row, 'vector'));
     },
 

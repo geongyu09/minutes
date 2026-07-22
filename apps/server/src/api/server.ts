@@ -10,6 +10,7 @@ import {
   completeConnection,
   createPendingConnection,
   findByAppToken,
+  hasPendingState,
   type NotionConnection,
 } from '@/oauth/connections';
 import { buildAuthorizeUrl, exchangeCode } from '@/oauth/notionOauth';
@@ -83,7 +84,7 @@ export function createServer(): http.Server {
             state: url.searchParams.get('state') ?? undefined,
             error: url.searchParams.get('error') ?? undefined,
           },
-          { exchange: exchangeCode, complete: completeConnection }
+          { hasPendingState, exchange: exchangeCode, complete: completeConnection }
         );
         if (result.status === 200) logger.info('노션 워크스페이스 연결 완료');
         respondHtml(res, result.status, result.html);

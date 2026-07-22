@@ -5,6 +5,7 @@ import {
   completeConnection,
   createPendingConnection,
   findByAppToken,
+  hasPendingState,
   listConnected,
   updateConnectionTokens,
 } from './connections';
@@ -50,6 +51,37 @@ describe('createPendingConnection', () => {
 
     expect(a.appToken).not.toBe(b.appToken);
     expect(a.state).not.toBe(b.state);
+  });
+
+  it('수명이 지난 pending 연결을 정리한다 (connected는 유지)', () => {
+    const stale = createPendingConnection();
+    const done = createPendingConnection();
+    completeConnection(done.state, workspace);
+    // 두 시간 전에 만들어진 것으로 되돌린다
+    db()
+      .prepare(
+        `UPDATE notion_connections
+         SET created_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-2 hours')
+         WHERE id IN (?, ?)`
+      )
+      .run(stale.connectionId, done.connectionId);
+
+    createPendingConnection();
+
+    expect(findByAppToken(stale.appToken)).toBeNull();
+    expect(findByAppToken(done.appToken)?.status).toBe('connected');
+  });
+});
+
+describe('hasPendingState', () => {
+  it('발급된 state는 true, 완료되었거나 모르는 state는 false', () => {
+    const session = createPendingConnection();
+
+    expect(hasPendingState(session.state)).toBe(true);
+    expect(hasPendingState('unknown-state')).toBe(false);
+
+    completeConnection(session.state, workspace);
+    expect(hasPendingState(session.state)).toBe(false);
   });
 });
 

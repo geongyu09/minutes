@@ -34,6 +34,7 @@ export function handleOauthSession(deps: OauthSessionDeps): OauthSessionResult {
 }
 
 export interface OauthCallbackDeps {
+  hasPendingState: (state: string) => boolean;
   exchange: (code: string) => Promise<WorkspaceGrant>;
   complete: (state: string, grant: WorkspaceGrant) => NotionConnection | null;
 }
@@ -56,6 +57,10 @@ export async function handleOauthCallback(
     return { status: 400, html: callbackPage('노션 연결이 취소되었습니다. 창을 닫아주세요.') };
   }
   if (!query.code || !query.state) {
+    return { status: 400, html: callbackPage('유효하지 않은 요청입니다. 앱에서 다시 시도해주세요.') };
+  }
+  // 노션 토큰 교환(외부 API 호출) 전에 state부터 검증한다 — 무의미한 외부 호출 유발 방지
+  if (!deps.hasPendingState(query.state)) {
     return { status: 400, html: callbackPage('유효하지 않은 요청입니다. 앱에서 다시 시도해주세요.') };
   }
 
