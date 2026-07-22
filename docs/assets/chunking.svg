@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560" width="900" height="560" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+  <rect width="900" height="560" fill="#ffffff"/>
+  <defs>
+    <marker id="arrow2" markerWidth="10" markerHeight="10" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <text x="24" y="38" font-size="16" font-weight="700" fill="#0f172a">회의록 한 장이 조각으로 나뉘는 방식</text>
+  <text x="24" y="60" font-size="12.5" fill="#475569">헤딩(#, ##, ###)을 기준으로 나누고, 각 조각 앞에 문서 제목과 위치를 적어 둡니다.</text>
+
+  <!-- 원문 -->
+  <rect x="24" y="82" width="330" height="356" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="44" y="108" font-size="13" font-weight="700" fill="#0f172a">노션 회의록 원문</text>
+
+  <text x="44" y="140" font-size="12.5" font-weight="700" fill="#0f172a"># 2월 스프린트 회고</text>
+  <text x="44" y="162" font-size="12" fill="#475569">플랫폼팀 정기 회고입니다.</text>
+
+  <rect x="36" y="176" width="306" height="72" rx="6" fill="#ffffff" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="48" y="200" font-size="12.5" font-weight="700" fill="#1d4ed8">## 잘된 점</text>
+  <text x="48" y="222" font-size="12" fill="#475569">- 배포 파이프라인을 정리했습니다</text>
+
+  <rect x="36" y="256" width="306" height="72" rx="6" fill="#ffffff" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="48" y="280" font-size="12.5" font-weight="700" fill="#1d4ed8">## 개선할 점</text>
+  <text x="48" y="302" font-size="12" fill="#475569">- 알림 누락 이슈가 남아 있습니다</text>
+
+  <rect x="36" y="336" width="306" height="72" rx="6" fill="#ffffff" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="48" y="360" font-size="12.5" font-weight="700" fill="#1d4ed8">### 배포 자동화</text>
+  <text x="48" y="382" font-size="12" fill="#475569">- 롤백 스크립트를 작성합니다</text>
+
+  <!-- 조각들 -->
+  <text x="440" y="108" font-size="13" font-weight="700" fill="#0f172a">임베딩되는 조각</text>
+
+  <rect x="440" y="120" width="436" height="96" rx="10" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5"/>
+  <rect x="440" y="120" width="436" height="52" rx="10" fill="#eff6ff"/>
+  <rect x="440" y="160" width="436" height="12" fill="#eff6ff"/>
+  <text x="458" y="142" font-size="12.5" font-weight="700" fill="#1d4ed8">문서: 2월 스프린트 회고</text>
+  <text x="458" y="163" font-size="12.5" font-weight="700" fill="#1d4ed8">위치: 잘된 점</text>
+  <text x="458" y="196" font-size="12" fill="#475569">- 배포 파이프라인을 정리했습니다</text>
+
+  <rect x="440" y="236" width="436" height="96" rx="10" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5"/>
+  <rect x="440" y="236" width="436" height="52" rx="10" fill="#eff6ff"/>
+  <rect x="440" y="276" width="436" height="12" fill="#eff6ff"/>
+  <text x="458" y="258" font-size="12.5" font-weight="700" fill="#1d4ed8">문서: 2월 스프린트 회고</text>
+  <text x="458" y="279" font-size="12.5" font-weight="700" fill="#1d4ed8">위치: 개선할 점</text>
+  <text x="458" y="312" font-size="12" fill="#475569">- 알림 누락 이슈가 남아 있습니다</text>
+
+  <rect x="440" y="352" width="436" height="96" rx="10" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5"/>
+  <rect x="440" y="352" width="436" height="52" rx="10" fill="#eff6ff"/>
+  <rect x="440" y="392" width="436" height="12" fill="#eff6ff"/>
+  <text x="458" y="374" font-size="12.5" font-weight="700" fill="#1d4ed8">문서: 2월 스프린트 회고</text>
+  <text x="458" y="395" font-size="12.5" font-weight="700" fill="#1d4ed8">위치: 개선할 점 &gt; 배포 자동화</text>
+  <text x="458" y="428" font-size="12" fill="#475569">- 롤백 스크립트를 작성합니다</text>
+
+  <line x1="346" y1="212" x2="434" y2="168" stroke="#64748b" stroke-width="1.6" marker-end="url(#arrow2)"/>
+  <line x1="346" y1="292" x2="434" y2="284" stroke="#64748b" stroke-width="1.6" marker-end="url(#arrow2)"/>
+  <line x1="346" y1="372" x2="434" y2="400" stroke="#64748b" stroke-width="1.6" marker-end="url(#arrow2)"/>
+
+  <text x="388" y="474" font-size="11.5" fill="#1d4ed8" text-anchor="middle">파란 부분이 머리말</text>
+
+  <rect x="24" y="490" width="852" height="52" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="44" y="514" font-size="12" fill="#475569">한 섹션이 900토큰을 넘으면 문단 단위로 더 나누고, 앞뒤 조각이 문맥을 잃지 않도록 조금씩 겹칩니다.</text>
+  <text x="44" y="532" font-size="12" fill="#b45309">50토큰이 안 되는 짧은 섹션은 앞 조각에 합쳐지고, 이때 그 섹션의 위치 정보는 사라집니다.</text>
+</svg>

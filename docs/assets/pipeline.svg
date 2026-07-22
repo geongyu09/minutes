@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1160 320" width="1160" height="320" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+  <rect width="1160" height="320" fill="#ffffff"/>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <text x="24" y="40" font-size="16" font-weight="700" fill="#0f172a">색인 파이프라인 — 노션 페이지가 검색 가능한 조각이 되기까지</text>
+  <text x="24" y="62" font-size="12.5" fill="#475569">서버에서 10분마다 반복 실행됩니다.</text>
+
+  <!-- 1 -->
+  <rect x="24" y="86" width="196" height="150" rx="10" fill="#ffffff" stroke="#0ea5e9" stroke-width="2"/>
+  <text x="40" y="114" font-size="13.5" font-weight="700" fill="#0369a1">1. 노션 페이지 수집</text>
+  <text x="40" y="140" font-size="11.5" fill="#475569">공유를 허용한 페이지</text>
+  <text x="40" y="160" font-size="11.5" fill="#475569">와 그 하위 페이지</text>
+  <text x="40" y="180" font-size="11.5" fill="#475569">100건씩 나눠 열거</text>
+  <text x="40" y="206" font-size="11.5" fill="#94a3b8">중첩 10단계까지</text>
+
+  <!-- 2 -->
+  <rect x="250" y="86" width="196" height="150" rx="10" fill="#ffffff" stroke="#0ea5e9" stroke-width="2"/>
+  <text x="266" y="114" font-size="13.5" font-weight="700" fill="#0369a1">2. 텍스트로 변환</text>
+  <text x="266" y="140" font-size="11.5" fill="#475569">문단 · 헤딩 · 목록</text>
+  <text x="266" y="160" font-size="11.5" fill="#475569">체크박스 · 표 · 코드</text>
+  <text x="266" y="180" font-size="11.5" fill="#475569">인용 · 콜아웃 · 토글</text>
+  <text x="266" y="206" font-size="11.5" fill="#b45309">이미지는 캡션만</text>
+
+  <!-- 3 -->
+  <rect x="476" y="86" width="196" height="150" rx="10" fill="#ffffff" stroke="#3b82f6" stroke-width="2"/>
+  <text x="492" y="114" font-size="13.5" font-weight="700" fill="#1d4ed8">3. 조각내기</text>
+  <text x="492" y="140" font-size="11.5" fill="#475569">#, ##, ### 기준 분할</text>
+  <text x="492" y="160" font-size="11.5" fill="#475569">900토큰 넘으면 재분할</text>
+  <text x="492" y="180" font-size="11.5" fill="#475569">앞뒤 조각 일부 겹침</text>
+  <text x="492" y="206" font-size="11.5" fill="#1d4ed8">머리말 붙이기</text>
+
+  <!-- 4 -->
+  <rect x="702" y="86" width="196" height="150" rx="10" fill="#ffffff" stroke="#0ea5e9" stroke-width="2"/>
+  <text x="718" y="114" font-size="13.5" font-weight="700" fill="#0369a1">4. 임베딩</text>
+  <text x="718" y="140" font-size="11.5" fill="#475569">조각을 숫자 벡터로</text>
+  <text x="718" y="160" font-size="11.5" fill="#475569">gemini-embedding-001</text>
+  <text x="718" y="180" font-size="11.5" fill="#475569">768차원 · 100건 배치</text>
+  <text x="718" y="206" font-size="11.5" fill="#94a3b8">외부 API 호출</text>
+
+  <!-- 5 -->
+  <rect x="928" y="86" width="196" height="150" rx="10" fill="#ffffff" stroke="#10b981" stroke-width="2"/>
+  <text x="944" y="114" font-size="13.5" font-weight="700" fill="#047857">5. 저장</text>
+  <text x="944" y="140" font-size="11.5" fill="#475569">서버 SQLite에 보관</text>
+  <text x="944" y="160" font-size="11.5" fill="#475569">벡터 색인 + 키워드</text>
+  <text x="944" y="180" font-size="11.5" fill="#475569">색인(FTS5) 동시 구축</text>
+  <text x="944" y="206" font-size="11.5" fill="#047857">연결(사용자)별 분리</text>
+
+  <line x1="222" y1="161" x2="246" y2="161" stroke="#64748b" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <line x1="448" y1="161" x2="472" y2="161" stroke="#64748b" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <line x1="674" y1="161" x2="698" y2="161" stroke="#64748b" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <line x1="900" y1="161" x2="924" y2="161" stroke="#64748b" stroke-width="1.6" marker-end="url(#arrow)"/>
+
+  <rect x="24" y="258" width="1100" height="42" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="44" y="284" font-size="12" fill="#475569">노션 데이터베이스의 각 행은 페이지라 본문이 색인되지만, 데이터베이스 자체와 속성값(담당자·상태·날짜)은 색인되지 않습니다.</text>
+</svg>

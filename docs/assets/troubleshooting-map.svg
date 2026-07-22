@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 620" width="1120" height="620" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+  <rect width="1120" height="620" fill="#ffffff"/>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <text x="30" y="44" font-size="18" font-weight="600" fill="#0f172a">증상 → 어디를 먼저 볼까</text>
+
+  <!-- 시작 -->
+  <rect x="410" y="80" width="300" height="46" rx="10" fill="#ffffff" stroke="#3b82f6" stroke-width="2"/>
+  <text x="560" y="109" font-size="15" font-weight="600" fill="#0f172a" text-anchor="middle">무언가 잘 되지 않을 때</text>
+
+  <!-- 분기 버스 -->
+  <line x1="560" y1="126" x2="560" y2="150" stroke="#94a3b8" stroke-width="2"/>
+  <line x1="155" y1="150" x2="875" y2="150" stroke="#94a3b8" stroke-width="2"/>
+  <line x1="155" y1="150" x2="155" y2="174" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="395" y1="150" x2="395" y2="174" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="635" y1="150" x2="635" y2="174" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="875" y1="150" x2="875" y2="174" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ① 앱 화면 -->
+  <rect x="30" y="178" width="250" height="46" rx="10" fill="#ffffff" stroke="#3b82f6" stroke-width="2"/>
+  <text x="155" y="207" font-size="15" font-weight="600" fill="#0f172a" text-anchor="middle">① 앱 화면</text>
+  <rect x="30" y="244" width="250" height="150" rx="10" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="46" y="270" font-size="12" font-weight="600" fill="#f59e0b">이런 증상이면</text>
+  <text x="46" y="296" font-size="12" fill="#0f172a">· 색인 숫자가 안 보임</text>
+  <text x="46" y="320" font-size="12" fill="#0f172a">· 재색인 눌러도 무반응</text>
+  <text x="46" y="344" font-size="12" fill="#0f172a">· 브라우저로 열면</text>
+  <text x="46" y="366" font-size="12" fill="#0f172a">  답변이 안 나옴</text>
+  <line x1="155" y1="394" x2="155" y2="414" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="30" y="416" width="250" height="140" rx="10" fill="#ffffff" stroke="#10b981" stroke-width="2"/>
+  <text x="46" y="442" font-size="12" font-weight="600" fill="#10b981">먼저 확인</text>
+  <text x="46" y="468" font-size="12" fill="#0f172a">· 서버 주소 설정값</text>
+  <text x="46" y="492" font-size="12" fill="#0f172a">· Tauri 앱으로 실행</text>
+  <text x="46" y="516" font-size="12" fill="#475569">→ 06 문서 · 앱 화면</text>
+
+  <!-- ② 노션 연결 -->
+  <rect x="270" y="178" width="250" height="46" rx="10" fill="#ffffff" stroke="#3b82f6" stroke-width="2"/>
+  <text x="395" y="207" font-size="15" font-weight="600" fill="#0f172a" text-anchor="middle">② 노션 연결·색인</text>
+  <rect x="270" y="244" width="250" height="150" rx="10" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="286" y="270" font-size="12" font-weight="600" fill="#f59e0b">이런 증상이면</text>
+  <text x="286" y="296" font-size="12" fill="#0f172a">· 노션 연결에 실패</text>
+  <text x="286" y="320" font-size="12" fill="#0f172a">· 3분 초과 안내</text>
+  <text x="286" y="344" font-size="12" fill="#0f172a">· 최신 회의록이</text>
+  <text x="286" y="366" font-size="12" fill="#0f172a">  검색되지 않음</text>
+  <line x1="395" y1="394" x2="395" y2="414" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="270" y="416" width="250" height="140" rx="10" fill="#ffffff" stroke="#10b981" stroke-width="2"/>
+  <text x="286" y="442" font-size="12" font-weight="600" fill="#10b981">먼저 확인</text>
+  <text x="286" y="468" font-size="12" fill="#0f172a">· 페이지 공유 여부</text>
+  <text x="286" y="492" font-size="12" fill="#0f172a">· 재색인 버튼 누르기</text>
+  <text x="286" y="516" font-size="12" fill="#475569">→ 02 · 04 문서</text>
+
+  <!-- ③ 서버 -->
+  <rect x="510" y="178" width="250" height="46" rx="10" fill="#ffffff" stroke="#3b82f6" stroke-width="2"/>
+  <text x="635" y="207" font-size="15" font-weight="600" fill="#0f172a" text-anchor="middle">③ 서버</text>
+  <rect x="510" y="244" width="250" height="150" rx="10" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="526" y="270" font-size="12" font-weight="600" fill="#f59e0b">이런 증상이면</text>
+  <text x="526" y="296" font-size="12" fill="#0f172a">· 검색 서버 오류</text>
+  <text x="526" y="320" font-size="12" fill="#0f172a">· 401 / 403 / 500</text>
+  <text x="526" y="344" font-size="12" fill="#0f172a">· 계속 연결 안 됨으로</text>
+  <text x="526" y="366" font-size="12" fill="#0f172a">  표시됨</text>
+  <line x1="635" y1="394" x2="635" y2="414" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="510" y="416" width="250" height="140" rx="10" fill="#ffffff" stroke="#10b981" stroke-width="2"/>
+  <text x="526" y="442" font-size="12" font-weight="600" fill="#10b981">먼저 확인</text>
+  <text x="526" y="468" font-size="12" fill="#0f172a">· /health 응답 내용</text>
+  <text x="526" y="492" font-size="12" fill="#0f172a">· 서버 로그 확인</text>
+  <text x="526" y="516" font-size="12" fill="#475569">→ 07 문서 · 운영자</text>
+
+  <!-- ④ LLM CLI -->
+  <rect x="750" y="178" width="250" height="46" rx="10" fill="#ffffff" stroke="#3b82f6" stroke-width="2"/>
+  <text x="875" y="207" font-size="15" font-weight="600" fill="#0f172a" text-anchor="middle">④ LLM CLI</text>
+  <rect x="750" y="244" width="250" height="150" rx="10" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="766" y="270" font-size="12" font-weight="600" fill="#f59e0b">이런 증상이면</text>
+  <text x="766" y="296" font-size="12" fill="#0f172a">· CLI를 찾지 못함</text>
+  <text x="766" y="320" font-size="12" fill="#0f172a">· 비정상 종료 code N</text>
+  <text x="766" y="344" font-size="12" fill="#0f172a">· 120초에서 끊김</text>
+  <text x="766" y="366" font-size="12" fill="#0f172a">· 답변에 배너가 섞임</text>
+  <line x1="875" y1="394" x2="875" y2="414" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="750" y="416" width="250" height="140" rx="10" fill="#ffffff" stroke="#10b981" stroke-width="2"/>
+  <text x="766" y="442" font-size="12" font-weight="600" fill="#10b981">먼저 확인</text>
+  <text x="766" y="468" font-size="12" fill="#0f172a">· CLI --version 실행</text>
+  <text x="766" y="492" font-size="12" fill="#0f172a">· CLI 로그인 상태</text>
+  <text x="766" y="516" font-size="12" fill="#475569">→ 06 문서 · 답변 생성</text>
+
+  <text x="30" y="592" font-size="12" fill="#475569">증상이 여러 갈래에 걸쳐 보이면 ③ 서버부터 확인하세요. 서버에 닿지 못하면 ① · ② 증상이 함께 나타납니다.</text>
+</svg>
