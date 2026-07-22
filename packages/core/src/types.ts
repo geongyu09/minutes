@@ -86,3 +86,12 @@ export interface RetrieveOptions {
   useHybrid?: boolean;
   useReranker?: boolean;
 }
+
+/** 생성 LLM 경계 — 로컬 CLI 어댑터를 이 뒤에 격리한다 */
+export interface LlmClient {
+  readonly provider: 'claude' | 'codex' | 'gemini';
+  /** 프롬프트를 받아 답변 텍스트를 토큰 단위로 스트리밍한다 */
+  stream(context: PromptContext): AsyncIterable<string>;
+  /** CLI 설치·로그인 여부 확인 (온보딩 안내용) */
+  isAvailable(): Promise<boolean>;
+}
