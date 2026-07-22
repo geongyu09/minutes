@@ -2,26 +2,38 @@ import http from 'node:http';
 import { logger } from '@minutes/core';
 import { config } from '@/config';
 import { createRetriever } from '@/retrieval/retriever';
-import { createVectorStore, countDocuments } from '@/retrieval/vectorStore';
-import { getLastSyncTime } from '@/ingestion/syncState';
-import { runIndexingForConnection } from '@/ingestion/indexer';
+import { createVectorStore, countDocuments, deleteAllDocuments } from '@/retrieval/vectorStore';
+import { clearLastSyncTime, getLastSyncTime } from '@/ingestion/syncState';
+import { indexConnectionWithRefresh } from '@/ingestion/indexer';
+import { getIndexJob, startIndexJob } from '@/ingestion/indexJobs';
 import { db } from '@/db';
 import { checkEmbedding } from '@/embedder';
 import {
+  cancelAuthorization,
   completeConnection,
   createPendingConnection,
   findByAppToken,
-  hasPendingState,
+  hasOauthState,
+  startReconnect,
   type NotionConnection,
 } from '@/oauth/connections';
 import { buildAuthorizeUrl, exchangeCode } from '@/oauth/notionOauth';
-import { handleHealth, handleSearch } from './handlers';
+import { handleHealth, handleIndex, handleIndexStatus, handleSearch } from './handlers';
 import {
   authenticate,
   handleOauthCallback,
+  handleOauthCancel,
+  handleOauthReconnect,
   handleOauthSession,
   handleOauthStatus,
 } from './oauthHandlers';
+
+/** 연결 변경으로 워크스페이스가 바뀐 경우 — 이전 워크스페이스의 색인 데이터를 남기지 않는다. */
+async function purgeIndexedData(connectionId: string): Promise<void> {
+  await deleteAllDocuments(connectionId);
+  await clearLastSyncTime(connectionId);
+  logger.info(`연결 변경 — 이전 워크스페이스 색인 데이터 폐기 (${connectionId})`);
+}
 
 async function checkDb(): Promise<void> {
   db().prepare('SELECT count(*) FROM chunks').get();
@@ -80,10 +92,30 @@ export function createServer(): http.Server {
             state: url.searchParams.get('state') ?? undefined,
             error: url.searchParams.get('error') ?? undefined,
           },
-          { hasPendingState, exchange: exchangeCode, complete: completeConnection }
+          {
+            hasOauthState,
+            exchange: exchangeCode,
+            complete: completeConnection,
+            purgeIndexedData,
+          }
         );
         if (result.status === 200) logger.info('노션 워크스페이스 연결 완료');
         respondHtml(res, result.status, result.html);
+        return;
+      }
+      if (req.method === 'POST' && url.pathname === '/oauth/notion/reconnect') {
+        const connection = authenticate(req.headers.authorization, findByAppToken);
+        const result = handleOauthReconnect(connection, {
+          startReconnect,
+          buildAuthUrl: buildAuthorizeUrl,
+        });
+        respond(res, result.status, result.body);
+        return;
+      }
+      if (req.method === 'POST' && url.pathname === '/oauth/notion/cancel') {
+        const connection = authenticate(req.headers.authorization, findByAppToken);
+        const result = handleOauthCancel(connection, { cancelAuthorization });
+        respond(res, result.status, result.body);
         return;
       }
       if (req.method === 'GET' && url.pathname === '/oauth/notion/status') {
@@ -119,7 +151,22 @@ export function createServer(): http.Server {
         const connection = requireConnected(req, res);
         if (!connection) return;
         const mode = url.searchParams.get('mode') === 'full' ? 'full' : 'incremental';
-        respond(res, 200, await runIndexingForConnection(connection, mode));
+        const result = await handleIndex(mode, {
+          clearCursor: () => clearLastSyncTime(connection.id),
+          start: () =>
+            startIndexJob(connection.id, mode, (onProgress) =>
+              indexConnectionWithRefresh(connection, mode, (p) => onProgress(p))
+            ),
+          getState: () => getIndexJob(connection.id),
+        });
+        respond(res, result.status, result.body);
+        return;
+      }
+      if (req.method === 'GET' && url.pathname === '/index/status') {
+        const connection = requireConnected(req, res);
+        if (!connection) return;
+        const result = handleIndexStatus(() => getIndexJob(connection.id));
+        respond(res, result.status, result.body);
         return;
       }
       respond(res, 404, { error: '알 수 없는 경로입니다' });
