@@ -2,39 +2,19 @@
   "name": "minutes",
   "version": "0.1.0",
   "private": true,
+  "workspaces": ["apps/*", "packages/*"],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
-    "index:all": "tsx scripts/index-all.ts",
-    "index:incremental": "tsx scripts/index-incremental.ts",
-    "search": "tsx scripts/search-test.ts",
-    "eval": "tsx scripts/eval.ts",
-    "db:migrate": "tsx scripts/migrate.ts"
-  },
-  "dependencies": {
-    "@ai-sdk/anthropic": "^2.0.0",
-    "@ai-sdk/react": "^2.0.0",
-    "@notionhq/client": "^2.3.0",
-    "ai": "^5.0.0",
-    "js-tiktoken": "^1.0.15",
-    "next": "^15.3.0",
-    "notion-to-md": "^3.1.9",
-    "openai": "^4.104.0",
-    "p-limit": "^6.2.0",
-    "postgres": "^3.4.5",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "dev": "bun run --cwd apps/desktop dev",
+    "server:dev": "bun run --cwd apps/server dev",
+    "test": "bun run --cwd apps/server test && bun run --cwd apps/desktop test",
+    "typecheck": "bun run --cwd apps/server typecheck && bun run --cwd apps/desktop typecheck && bun run --cwd packages/core typecheck",
+    "index:all": "bun run --cwd apps/server index:all",
+    "index:incremental": "bun run --cwd apps/server index:incremental",
+    "search": "bun run --cwd apps/server search",
+    "eval": "bun run --cwd apps/server eval",
+    "db:migrate": "bun run --cwd apps/server db:migrate"
   },
   "devDependencies": {
-    "@types/node": "^22.15.0",
-    "@types/react": "^19.1.0",
-    "@types/react-dom": "^19.1.0",
-    "tsx": "^4.19.0",
-    "typescript": "^5.8.0",
-    "vitest": "^3.1.0"
+    "typescript": "^5.8.0"
   }
 }
