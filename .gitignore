@@ -1,0 +1,13 @@
+node_modules/
+.next/
+logs/
+.env*.local
+.env
+*.tsbuildinfo
+next-env.d.ts
+
+# Claude 관련 파일
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+.mcp.json
