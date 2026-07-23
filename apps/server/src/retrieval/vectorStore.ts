@@ -63,22 +63,30 @@ function deleteChunksOfDocument(connectionId: string, documentId: string): void 
  */
 export function createVectorStore(connectionId: string): VectorStore {
   return {
-    async upsert(chunks: EmbeddedChunk[]) {
+    async upsert(chunks: EmbeddedChunk[], meta?: { contentHash?: string }) {
       if (chunks.length === 0) return;
 
       const doc = chunks[0].metadata;
       const upsertAll = db().transaction(() => {
         db()
           .prepare(
-            `INSERT INTO documents (connection_id, id, title, url, last_edited_time)
-             VALUES (?, ?, ?, ?, ?)
+            `INSERT INTO documents (connection_id, id, title, url, last_edited_time, content_hash)
+             VALUES (?, ?, ?, ?, ?, ?)
              ON CONFLICT (connection_id, id) DO UPDATE SET
                title = excluded.title,
                url = excluded.url,
                last_edited_time = excluded.last_edited_time,
+               content_hash = excluded.content_hash,
                indexed_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`
           )
-          .run(connectionId, chunks[0].documentId, doc.documentTitle, doc.documentUrl, doc.lastEditedTime);
+          .run(
+            connectionId,
+            chunks[0].documentId,
+            doc.documentTitle,
+            doc.documentUrl,
+            doc.lastEditedTime,
+            meta?.contentHash ?? null
+          );
 
         const insertChunk = db().prepare(
           `INSERT INTO chunks (connection_id, id, document_id, chunk_index, content, heading_path, token_count)
@@ -157,6 +165,19 @@ export async function countDocuments(connectionId: string): Promise<number> {
     .prepare('SELECT count(*) AS count FROM documents WHERE connection_id = ?')
     .get(connectionId) as { count: number };
   return count;
+}
+
+/**
+ * 문서 ID → 마지막 색인 시 본문 해시. 해시가 같은 문서는 이번 회차에 임베딩하지 않는다.
+ * 값이 NULL(=해시를 모름)인 문서는 맵에서 빠지므로 반드시 다시 임베딩된다.
+ */
+export async function getContentHashes(connectionId: string): Promise<Map<string, string>> {
+  const rows = db()
+    .prepare(
+      'SELECT id, content_hash FROM documents WHERE connection_id = ? AND content_hash IS NOT NULL'
+    )
+    .all(connectionId) as { id: string; content_hash: string }[];
+  return new Map(rows.map((r) => [r.id, r.content_hash]));
 }
 
 export async function getAllDocumentIds(connectionId: string): Promise<string[]> {

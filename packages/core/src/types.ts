@@ -55,11 +55,30 @@ export interface Message {
 
 /* ---------- 인터페이스 ---------- */
 
-export interface DocumentSource {
-  // 스트리밍(AsyncIterable)인 이유: 페이지 1건의 오류가 전체 수집을 죽이지 않게
-  // 페이지 단위로 격리하고, 전체 문서를 메모리에 올리지 않기 위함
-  fetchAll(): AsyncIterable<RawDocument>;
-  fetchUpdatedSince(date: Date): AsyncIterable<RawDocument>;
+/** 변경·삭제 감지에 필요한 최소 메타데이터 */
+export interface DocumentRef {
+  id: string;
+  lastEditedTime: string;
+}
+
+export interface DocumentListing<R extends DocumentRef = DocumentRef> {
+  refs: R[];
+  /** 소스의 전체 목록인가. 조기 종료해 일부만 받았으면 false — 삭제 감지에 쓰면 안 된다. */
+  complete: boolean;
+}
+
+export interface DocumentSource<R extends DocumentRef = DocumentRef> {
+  /**
+   * 문서 목록(메타데이터만). `since`를 주면 그보다 오래된 문서가 나온 시점에 조기 종료할 수 있고,
+   * 그때 `complete`는 false다.
+   */
+  listRefs(options?: { since?: Date }): Promise<DocumentListing<R>>;
+  /**
+   * 목록을 **인자로 받아** 문서를 스트리밍한다 — 한 회차에 목록을 두 번 조회하지 않기 위함.
+   * 스트리밍(AsyncIterable)인 이유: 한 건의 오류가 전체 수집을 죽이지 않게 문서 단위로 격리하고,
+   * 전체 문서를 메모리에 올리지 않기 위함.
+   */
+  fetch(refs: R[], options?: unknown): AsyncIterable<RawDocument>;
 }
 
 export interface Embedder {
@@ -68,7 +87,8 @@ export interface Embedder {
 }
 
 export interface VectorStore {
-  upsert(chunks: EmbeddedChunk[]): Promise<void>;
+  /** meta.contentHash를 함께 저장하면 다음 회차에 내용이 그대로인 문서의 임베딩을 건너뛸 수 있다 */
+  upsert(chunks: EmbeddedChunk[], meta?: { contentHash?: string }): Promise<void>;
   search(vector: number[], topK: number, filter?: SearchFilter): Promise<SearchResult[]>;
   deleteByDocumentId(documentId: string): Promise<void>;
   count(): Promise<number>;

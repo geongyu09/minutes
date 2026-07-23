@@ -1,7 +1,13 @@
 import { logger } from '@minutes/core';
-import type { EmbeddedChunk } from '@minutes/core';
+import type { Chunk, EmbeddedChunk, RawDocument } from '@minutes/core';
+import { config } from '@/config';
 import { embedder, RateLimitError } from '@/embedder';
-import { createVectorStore, deleteDocument, getAllDocumentIds } from '@/retrieval/vectorStore';
+import {
+  createVectorStore,
+  deleteDocument,
+  getAllDocumentIds,
+  getContentHashes,
+} from '@/retrieval/vectorStore';
 import {
   listConnected,
   updateConnectionTokens,
@@ -11,19 +17,31 @@ import { refreshTokens } from '@/oauth/notionOauth';
 import { createNotionClient } from './notion/client';
 import { createNotionSource, type NotionSource } from './notion';
 import { chunkDocument } from './chunker';
-import { getLastSyncTime, setLastSyncTime } from './syncState';
+import { contentHash } from './contentHash';
+import {
+  bumpRunsSinceSweep,
+  getLastSweepTime,
+  getLastSyncTime,
+  getRunsSinceSweep,
+  recordDeletionSweep,
+  setLastSyncTime,
+} from './syncState';
 
 export interface IndexingResult {
   mode: 'full' | 'incremental';
   total: number;
   indexed: number;
+  /** 내용이 그대로라 임베딩을 건너뛴 문서 수 — indexed와 구분해 보고한다 */
+  skipped: number;
   failed: number;
   deleted: number;
+  /** 이번 회차에 삭제 정리를 했는가 + 마지막으로 한 시각 — 삭제 반영 지연을 드러낸다 */
+  deletionSweep: { performed: boolean; lastSweptAt?: string };
   /** 쿼터 초과·인증 만료 등으로 중단됨 — 커서를 전진시키지 않았다 */
   aborted?: { reason: 'rate_limit' | 'unauthorized'; message: string };
 }
 
-export interface IndexingSummary extends IndexingResult {
+export interface IndexingSummary extends Omit<IndexingResult, 'deletionSweep'> {
   connections: number;
 }
 
@@ -55,6 +73,7 @@ export async function runIndexingForConnection(
   const vectorStore = createVectorStore(connection.id);
 
   let indexed = 0;
+  let skipped = 0;
   let failed = 0;
   const failedEditedTimes: number[] = [];
   let aborted: IndexingResult['aborted'];
@@ -66,29 +85,65 @@ export async function runIndexingForConnection(
   };
 
   const since = mode === 'incremental' ? await getLastSyncTime(connection.id) : undefined;
-  // total은 선-수집한 페이지 목록 길이 — 진행 로그와 결과 보고에 쓴다
-  const pageRefs = await deps.source.listPageRefs();
-  const targetRefs = since ? pageRefs.filter((p) => new Date(p.lastEditedTime) > since) : pageRefs;
+  // 전체 목록을 받는 회차에서만 삭제를 정리한다. 매 회차 전체 목록을 훑는 비용이 크므로
+  // N회차마다 한 번만 받고, 그 사이의 삭제 반영 지연은 결과(deletionSweep)로 드러낸다.
+  const runsSinceSweep = await getRunsSinceSweep(connection.id);
+  const wantsFullList =
+    !since || runsSinceSweep + 1 >= config.sync.fullListEveryNRuns;
+
+  // 목록은 한 회차에 한 번만 조회한다 — 수집용과 삭제 감지용이 같은 search 결과다
+  const listing = await deps.source.listRefs(wantsFullList ? undefined : { since });
+  const targetRefs = since
+    ? listing.refs.filter((p) => new Date(p.lastEditedTime) > since)
+    : listing.refs;
   const total = targetRefs.length;
   onProgress?.({ indexed: 0, total });
 
-  const documents = since
-    ? deps.source.fetchUpdatedSince(since, { onSkip })
-    : deps.source.fetchAll({ onSkip });
+  const documents = deps.source.fetch(targetRefs, { onSkip });
 
-  for await (const doc of documents) {
+  // 임베딩 요청은 문서 경계를 넘어 batchSize까지 채운다 (요청 수 = 전체 청크 수 / batchSize).
+  // 원자성 경계는 그대로 문서다 — DB 쓰기는 문서 단위 delete-then-insert를 유지한다.
+  type Pending = { doc: RawDocument; chunks: Chunk[]; hash: string };
+  const buffer: Pending[] = [];
+  let bufferedChunks = 0;
+  // 진행률은 "처리에 착수한 문서" 기준 — flush를 기다리는 동안 UI가 멈춰 보이지 않게 한다
+  let processed = 0;
+
+  // 문서 본문 해시는 문서당 한 번만 계산한다
+  const hashes = new Map<string, string>();
+  const hashOf = (doc: RawDocument) => {
+    let hash = hashes.get(doc.id);
+    if (!hash) hashes.set(doc.id, (hash = contentHash(doc.markdown)));
+    return hash;
+  };
+  const knownHashes = await getContentHashes(connection.id);
+
+  // 진행 중인 flush — 항상 1개 이하로 유지한다
+  let pendingFlush: Promise<boolean> = Promise.resolve(true);
+
+  const markFailed = (doc: RawDocument) => {
+    failed++;
+    failedEditedTimes.push(new Date(doc.lastEditedTime).getTime());
+  };
+
+  /** 버퍼를 통째로 꺼낸다 — flush가 도는 동안 수집이 새 버퍼를 채울 수 있게 동기적으로 비운다 */
+  const takeBatch = () => {
+    const batch = buffer.splice(0, buffer.length);
+    bufferedChunks = 0;
+    return batch;
+  };
+
+  /** 한 배치를 한 번의 embed 호출로 임베딩하고 문서 단위로 저장한다. 중단 오류면 false. */
+  const flushBatch = async (batch: Pending[]): Promise<boolean> => {
+    if (batch.length === 0) return true;
+    const texts = batch.flatMap((b) => b.chunks.map((c) => c.content));
+
+    let vectors: number[][];
     try {
-      const chunks = chunkDocument(doc);
-      if (chunks.length === 0) continue;
-
-      const vectors = await deps.embed(chunks.map((c) => c.content));
-      const embedded: EmbeddedChunk[] = chunks.map((chunk, i) => ({ ...chunk, vector: vectors[i] }));
-      await vectorStore.deleteByDocumentId(doc.id); // delete-then-insert
-      await vectorStore.upsert(embedded);
-
-      indexed++;
-      onProgress?.({ indexed, total });
-      logger.info(`[${indexed}/${total}] ${doc.title} — 청크 ${chunks.length}개`);
+      vectors = await deps.embed(texts);
+      if (vectors.length !== texts.length) {
+        throw new Error(`임베딩 개수가 요청과 다릅니다 (요청 ${texts.length}, 응답 ${vectors.length})`);
+      }
     } catch (err) {
       // 중단 오류: 남은 문서도 같은 이유로 실패할 것이므로 즉시 멈추고 커서를 건드리지 않는다
       if (err instanceof RateLimitError) {
@@ -97,30 +152,100 @@ export async function runIndexingForConnection(
         aborted = { reason: 'unauthorized', message: String(err) };
       }
       if (aborted) {
-        logger.error(`색인 중단 (${aborted.reason}): ${doc.title}`, aborted.message);
-        break;
+        logger.error(`색인 중단 (${aborted.reason}): 문서 ${batch.length}건`, aborted.message);
+        return false;
       }
-      failed++;
-      failedEditedTimes.push(new Date(doc.lastEditedTime).getTime());
-      logger.error(`색인 실패: ${doc.title}`, String(err));
-      // 한 문서가 실패해도 나머지는 계속 진행
+      // 실패는 이 배치까지만 번진다 — 다음 배치는 정상 진행한다
+      for (const { doc } of batch) {
+        markFailed(doc);
+        logger.error(`색인 실패: ${doc.title}`, String(err));
+      }
+      return true;
     }
+
+    let offset = 0;
+    for (const { doc, chunks, hash } of batch) {
+      const slice = vectors.slice(offset, offset + chunks.length);
+      offset += chunks.length;
+      try {
+        const embedded: EmbeddedChunk[] = chunks.map((chunk, i) => ({ ...chunk, vector: slice[i] }));
+        await vectorStore.deleteByDocumentId(doc.id); // delete-then-insert
+        await vectorStore.upsert(embedded, { contentHash: hash });
+        indexed++;
+        logger.info(`[${indexed}/${total}] ${doc.title} — 청크 ${chunks.length}개`);
+      } catch (err) {
+        markFailed(doc);
+        logger.error(`색인 실패: ${doc.title}`, String(err));
+      }
+    }
+    return true;
+  };
+
+  for await (const doc of documents) {
+    processed++;
+    onProgress?.({ indexed: processed, total });
+
+    // 내용·파라미터가 그대로면 벡터도 그대로다 — 청킹·임베딩·쓰기를 전부 건너뛴다
+    if (knownHashes.get(doc.id) === hashOf(doc)) {
+      skipped++;
+      continue;
+    }
+
+    let chunks: Chunk[];
+    try {
+      chunks = chunkDocument(doc);
+    } catch (err) {
+      markFailed(doc);
+      logger.error(`청킹 실패: ${doc.title}`, String(err));
+      continue;
+    }
+    if (chunks.length === 0) continue;
+
+    buffer.push({ doc, chunks, hash: hashOf(doc) });
+    bufferedChunks += chunks.length;
+    if (bufferedChunks >= config.embedding.batchSize) {
+      // 배치를 먼저 떼어내고 이전 flush만 기다린다 — 수집은 flush가 도는 동안에도 계속된다.
+      // 동시에 도는 flush는 1개로 제한한다 (임베딩 쿼터·SQLite 라이터 보호).
+      const batch = takeBatch();
+      if (!(await pendingFlush)) break;
+      pendingFlush = flushBatch(batch);
+    }
+  }
+  if (!(await pendingFlush)) {
+    // 마지막 배치는 버린다 — 중단된 회차는 커서를 전진시키지 않으므로 다음 회차가 다시 시도한다
+  } else if (!aborted) {
+    await flushBatch(takeBatch());
   }
 
   if (aborted) {
     // 삭제 정리도 커서 전진도 하지 않는다 — 다음 회차가 이번 대상을 그대로 다시 시도한다
-    return { mode, total, indexed, failed, deleted: 0, aborted };
+    await bumpRunsSinceSweep(connection.id);
+    return {
+      mode,
+      total,
+      indexed,
+      skipped,
+      failed,
+      deleted: 0,
+      deletionSweep: await sweepState(connection.id, false),
+      aborted,
+    };
   }
 
-  // 삭제된 문서 정리 — 노션에 없는데 이 연결의 DB에 있는 문서를 지운다
-  const currentIds = new Set(pageRefs.map((p) => p.id));
-  const storedIds = await getAllDocumentIds(connection.id);
+  // 삭제된 문서 정리 — 노션에 없는데 이 연결의 DB에 있는 문서를 지운다.
+  // **불완전한 목록으로 지우면 멀쩡한 문서가 사라진다** — complete한 회차에서만 수행한다.
   let deleted = 0;
-  for (const id of storedIds) {
-    if (!currentIds.has(id)) {
-      await deleteDocument(connection.id, id);
-      deleted++;
+  if (listing.complete) {
+    const currentIds = new Set(listing.refs.map((p) => p.id));
+    for (const id of await getAllDocumentIds(connection.id)) {
+      if (!currentIds.has(id)) {
+        await deleteDocument(connection.id, id);
+        deleted++;
+      }
     }
+    await recordDeletionSweep(connection.id, startedAt);
+  } else {
+    await bumpRunsSinceSweep(connection.id);
   }
 
   // 실패한 문서는 다음 회차 대상에 다시 포함되도록 커서를 그 문서 시각 앞으로 되돌린다
@@ -130,7 +255,23 @@ export async function runIndexingForConnection(
       ? new Date(Math.min(startedAt.getTime(), Math.min(...failedEditedTimes) - 1))
       : startedAt;
   await setLastSyncTime(connection.id, cursor);
-  return { mode, total, indexed, failed, deleted };
+  return {
+    mode,
+    total,
+    indexed,
+    skipped,
+    failed,
+    deleted,
+    deletionSweep: await sweepState(connection.id, listing.complete),
+  };
+}
+
+async function sweepState(
+  connectionId: string,
+  performed: boolean
+): Promise<IndexingResult['deletionSweep']> {
+  const lastSweptAt = await getLastSweepTime(connectionId);
+  return { performed, lastSweptAt: lastSweptAt?.toISOString() };
 }
 
 function isUnauthorized(err: unknown): boolean {
@@ -176,6 +317,7 @@ export async function runIndexing(mode: 'full' | 'incremental'): Promise<Indexin
     connections: connections.length,
     total: 0,
     indexed: 0,
+    skipped: 0,
     failed: 0,
     deleted: 0,
   };
@@ -185,6 +327,7 @@ export async function runIndexing(mode: 'full' | 'incremental'): Promise<Indexin
       const result = await indexConnectionWithRefresh(connection, mode);
       summary.total += result.total;
       summary.indexed += result.indexed;
+      summary.skipped += result.skipped;
       summary.failed += result.failed;
       summary.deleted += result.deleted;
     } catch (err) {

@@ -3,7 +3,7 @@ import type { IndexingResult } from './indexer';
 import { getIndexJob, startIndexJob, type IndexProgress } from './indexJobs';
 
 function okResult(): IndexingResult {
-  return { mode: 'full', total: 2, indexed: 2, failed: 0, deleted: 0 };
+  return { mode: 'full', total: 2, indexed: 2, skipped: 0, failed: 0, deleted: 0, deletionSweep: { performed: true } };
 }
 
 /** run이 신호를 받을 때까지 완료되지 않게 잡아둔다 */

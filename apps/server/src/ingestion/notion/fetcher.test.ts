@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { Client } from '@notionhq/client';
+import type { ThrottledClient } from './client';
 import { listAllBlocks, listAllPages } from './fetcher';
+
+/** 스로틀 없이 그대로 호출한다 — 속도 제한은 client.test.ts가 검증한다 */
+const passthrough = (client: Client): ThrottledClient => ({ client, throttled: (fn) => fn() });
 
 function page(id: string, title: string) {
   return {
@@ -22,7 +26,7 @@ describe('listAllPages', () => {
       }),
     } as unknown as Client;
 
-    const pages = await listAllPages(client);
+    const { refs: pages } = await listAllPages(passthrough(client));
 
     expect(pages.map((p) => p.id)).toEqual(['p1', 'p2']);
     expect(pages[0].title).toBe('주간 회의');
@@ -40,10 +44,54 @@ describe('listAllPages', () => {
       },
     } as unknown as Client;
 
-    const pages = await listAllPages(client);
+    const { refs: pages } = await listAllPages(passthrough(client));
 
     expect(pages).toHaveLength(3);
     expect(calls).toEqual([undefined, 'cursor-2']);
+  });
+
+  it('since를 주면 최신순 정렬로 요청하고, 오래된 페이지가 나오면 페이지네이션을 끊는다', async () => {
+    const calls: unknown[] = [];
+    const old = { ...page('p-old', '오래된 회의'), last_edited_time: '2026-07-01T00:00:00.000Z' };
+    const fresh = { ...page('p-new', '최근 회의'), last_edited_time: '2026-07-20T00:00:00.000Z' };
+    const client = {
+      search: async (args: Record<string, unknown>) => {
+        calls.push(args);
+        return { results: [fresh, old], has_more: true, next_cursor: 'cursor-2' };
+      },
+    } as unknown as Client;
+
+    const listing = await listAllPages(passthrough(client), { since: new Date('2026-07-10T00:00:00.000Z') });
+
+    expect(calls).toHaveLength(1); // 다음 커서를 요청하지 않는다
+    expect((calls[0] as { sort: unknown }).sort).toEqual({
+      timestamp: 'last_edited_time',
+      direction: 'descending',
+    });
+    expect(listing.refs.map((p) => p.id)).toEqual(['p-new']);
+    expect(listing.complete).toBe(false); // 일부만 받았다 — 삭제 감지에 쓰면 안 된다
+  });
+
+  it('since가 없으면 전체 목록이며 complete는 true다', async () => {
+    const client = {
+      search: async () => ({ results: [page('p1', '회의')], has_more: false, next_cursor: null }),
+    } as unknown as Client;
+
+    expect((await listAllPages(passthrough(client))).complete).toBe(true);
+  });
+
+  it('since를 줘도 끝까지 훑었으면 complete는 true다', async () => {
+    const client = {
+      search: async () => ({
+        results: [{ ...page('p1', '회의'), last_edited_time: '2026-07-20T00:00:00.000Z' }],
+        has_more: false,
+        next_cursor: null,
+      }),
+    } as unknown as Client;
+
+    const listing = await listAllPages(passthrough(client), { since: new Date('2026-07-10T00:00:00.000Z') });
+
+    expect(listing.complete).toBe(true);
   });
 
   it('DB 행 속성 색인을 위해 properties를 그대로 전달한다', async () => {
@@ -58,7 +106,7 @@ describe('listAllPages', () => {
       search: async () => ({ results: [row], has_more: false, next_cursor: null }),
     } as unknown as Client;
 
-    const pages = await listAllPages(client);
+    const { refs: pages } = await listAllPages(passthrough(client));
 
     expect(pages[0].properties).toEqual(row.properties);
   });
@@ -72,7 +120,7 @@ describe('listAllPages', () => {
       }),
     } as unknown as Client;
 
-    expect(await listAllPages(client)).toHaveLength(1);
+    expect((await listAllPages(passthrough(client))).refs).toHaveLength(1);
   });
 });
 
@@ -97,7 +145,7 @@ describe('listAllBlocks', () => {
       },
     } as unknown as Client;
 
-    const blocks = await listAllBlocks(client, 'root');
+    const blocks = await listAllBlocks(passthrough(client), 'root');
 
     expect(blocks).toHaveLength(2);
     expect(blocks[0].children.map((b) => b.id)).toEqual(['b1-1']);

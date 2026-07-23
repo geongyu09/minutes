@@ -8,7 +8,7 @@ function connection(id: string): NotionConnection {
 }
 
 function okResult(): IndexingResult {
-  return { mode: 'incremental', total: 0, indexed: 0, failed: 0, deleted: 0 };
+  return { mode: 'incremental', total: 0, indexed: 0, skipped: 0, failed: 0, deleted: 0, deletionSweep: { performed: false } };
 }
 
 describe('runScheduledSync', () => {
