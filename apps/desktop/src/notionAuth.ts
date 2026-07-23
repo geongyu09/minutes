@@ -1,33 +1,12 @@
 /**
- * 노션 연결(OAuth) 클라이언트 — 서버가 발급한 앱 토큰으로 자신(사용자)을 증명한다.
- * 앱 토큰은 localStorage에 보관하고, 모든 서버 요청의 Bearer 헤더로 쓴다.
+ * 프로젝트의 색인용 노션 연결(OAuth) 클라이언트 — owner만 호출할 수 있다.
+ * 로그인용 노션 인가는 별도다(`authClient.ts`) — 목적과 페이지 선택 범위가 다르다.
  */
 import { config } from '@/config';
 import { serverFetch } from '@/serverFetch';
+import { getAppToken } from '@/session';
 
 type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
-
-const APP_TOKEN_KEY = 'minutes.appToken';
-
-export function getAppToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return window.localStorage.getItem(APP_TOKEN_KEY);
-}
-
-export function setAppToken(token: string): void {
-  window.localStorage.setItem(APP_TOKEN_KEY, token);
-}
-
-/** 저장된 앱 토큰이 있으면 Bearer 헤더를 만든다. */
-export function authHeaders(): Record<string, string> {
-  const token = getAppToken();
-  return token ? { authorization: `Bearer ${token}` } : {};
-}
-
-export interface ConnectSession {
-  appToken: string;
-  authUrl: string;
-}
 
 export interface ConnectionStatus {
   connected: boolean;
@@ -37,49 +16,48 @@ export interface ConnectionStatus {
 }
 
 export interface NotionAuthClient {
-  /** 연결 시작 — 서버가 앱 토큰과 노션 인가 URL을 발급한다. */
-  startSession(): Promise<ConnectSession>;
-  /** 연결 변경 — 앱 토큰은 그대로 두고 새 인가 URL만 받는다. */
-  startReconnect(appToken: string): Promise<string>;
+  /** 연결 시작. 이미 연결된 프로젝트에서 부르면 연결 변경이 된다. */
+  startConnect(projectId: string): Promise<string>;
   /** 연결 완료 폴링. */
-  getStatus(appToken: string): Promise<ConnectionStatus>;
+  getStatus(projectId: string): Promise<ConnectionStatus>;
   /** 승인 대기 취소 — 진행 중인 인가만 버리고 기존 연결은 그대로 둔다. */
-  cancel(appToken: string): Promise<void>;
+  cancel(projectId: string): Promise<void>;
 }
 
 export function createNotionAuthClient(
   baseUrl: string,
-  fetchFn: FetchLike = serverFetch
+  fetchFn: FetchLike = serverFetch,
+  getToken: () => string | null = getAppToken
 ): NotionAuthClient {
-  return {
-    async startSession() {
-      const res = await fetchFn(`${baseUrl}/oauth/notion/session`, { method: 'POST' });
-      if (!res.ok) throw new Error(`노션 연결 시작 실패 (${res.status})`);
-      return (await res.json()) as ConnectSession;
-    },
+  const scoped = (path: string, projectId: string): string =>
+    `${baseUrl}${path}?projectId=${encodeURIComponent(projectId)}`;
 
-    async startReconnect(appToken) {
-      const res = await fetchFn(`${baseUrl}/oauth/notion/reconnect`, {
+  const headers = (): Record<string, string> => {
+    const token = getToken();
+    return token ? { authorization: `Bearer ${token}` } : {};
+  };
+
+  return {
+    async startConnect(projectId) {
+      const res = await fetchFn(scoped('/oauth/notion/session', projectId), {
         method: 'POST',
-        headers: { authorization: `Bearer ${appToken}` },
+        headers: headers(),
       });
-      if (!res.ok) throw new Error(`노션 연결 변경 시작 실패 (${res.status})`);
+      if (!res.ok) throw new Error(`노션 연결 시작 실패 (${res.status})`);
       const body = (await res.json()) as { authUrl: string };
       return body.authUrl;
     },
 
-    async getStatus(appToken) {
-      const res = await fetchFn(`${baseUrl}/oauth/notion/status`, {
-        headers: { authorization: `Bearer ${appToken}` },
-      });
+    async getStatus(projectId) {
+      const res = await fetchFn(scoped('/oauth/notion/status', projectId), { headers: headers() });
       if (!res.ok) throw new Error(`연결 상태 조회 실패 (${res.status})`);
       return (await res.json()) as ConnectionStatus;
     },
 
-    async cancel(appToken) {
-      const res = await fetchFn(`${baseUrl}/oauth/notion/cancel`, {
+    async cancel(projectId) {
+      const res = await fetchFn(scoped('/oauth/notion/cancel', projectId), {
         method: 'POST',
-        headers: { authorization: `Bearer ${appToken}` },
+        headers: headers(),
       });
       if (!res.ok) throw new Error(`연결 취소 실패 (${res.status})`);
     },

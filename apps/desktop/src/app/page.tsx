@@ -5,10 +5,15 @@ import { useChat } from '@ai-sdk/react';
 import type { UIMessage } from 'ai';
 import type { Citation } from '@minutes/core';
 import { createChatTransport, type PipelineStage } from '@/generation/chatTransport';
+import { clearProjectId } from '@/session';
 import { ChatMessage } from './components/ChatMessage';
 import { IndexStatus } from './components/IndexStatus';
+import { Login } from './components/Login';
 import { NotionConnect } from './components/NotionConnect';
 import { PendingIndicator } from './components/PendingIndicator';
+import { ProjectGate } from './components/ProjectGate';
+import { ProjectSettings } from './components/ProjectSettings';
+import { useSession } from './useSession';
 
 function textOf(message: UIMessage): string {
   return message.parts
@@ -30,6 +35,9 @@ function stageOf(message: UIMessage | undefined): PipelineStage | null {
 }
 
 export default function ChatPage() {
+  const { state, refresh, signIn, signOut, selectProject } = useSession();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
   // 생성 파이프라인은 서버가 아니라 웹뷰 안에서 실행된다 (Tauri 정적 export)
   const [transport] = useState(() => createChatTransport());
   const { messages, sendMessage, status, error } = useChat({
@@ -58,13 +66,71 @@ export default function ChatPage() {
     setInput('');
   };
 
+  if (state.status === 'loading') return <div className="container" />;
+
+  if (state.status === 'anonymous') {
+    return (
+      <div className="container">
+        <Login onSignedIn={signIn} />
+      </div>
+    );
+  }
+
+  // 로그인은 됐지만 볼 프로젝트가 없다 — 만들거나 초대 코드로 참여한다
+  if (!state.projectId) {
+    return (
+      <div className="container">
+        <ProjectGate
+          projects={state.me.projects}
+          onEntered={async (projectId) => {
+            await refresh();
+            selectProject(projectId);
+          }}
+        />
+      </div>
+    );
+  }
+
+  const project = state.me.projects.find((p) => p.id === state.projectId);
+  const isOwner = project?.role === 'owner';
+
   return (
     <div className="container">
       <header className="header">
         <h1>minutes</h1>
-        <NotionConnect />
-        <IndexStatus />
+
+        {state.me.projects.length > 1 ? (
+          <select value={state.projectId} onChange={(e) => selectProject(e.target.value)}>
+            {state.me.projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <span className="project-name">{project?.name}</span>
+        )}
+
+        <NotionConnect projectId={state.projectId} canConnect={!!isOwner} onConnected={refresh} />
+        <IndexStatus projectId={state.projectId} canReindex={!!isOwner} />
+        <button onClick={() => setSettingsOpen((open) => !open)}>설정</button>
+        <button onClick={signOut}>로그아웃</button>
       </header>
+
+      {settingsOpen && project && (
+        <ProjectSettings
+          projectId={project.id}
+          projectName={project.name}
+          myUserId={state.me.user.id}
+          onClose={() => setSettingsOpen(false)}
+          onConnected={refresh}
+          onDeleted={async () => {
+            setSettingsOpen(false);
+            clearProjectId();
+            await refresh();
+          }}
+        />
+      )}
 
       <main className="messages">
         {messages.length === 0 && (

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { config } from '@/config';
 import { serverFetch } from '@/serverFetch';
-import { authHeaders } from '@/notionAuth';
+import { authHeaders } from '@/session';
 import { indexClient, type IndexJob, type ReindexResult } from '@/indexClient';
 
 interface Status {
@@ -30,19 +30,30 @@ function noticeFrom(job: IndexJob): string | null {
   return null;
 }
 
-export function IndexStatus() {
+interface Props {
+  projectId: string;
+  /** 색인은 노션 토큰이 필요하므로 owner만 시작할 수 있다 (서버도 같은 규칙을 검사한다). */
+  canReindex: boolean;
+}
+
+export function IndexStatus({ projectId, canReindex }: Props) {
   const [status, setStatus] = useState<Status | null>(null);
   const [job, setJob] = useState<IndexJob | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const res = await serverFetch(`${config.server.baseUrl}/status`, { headers: authHeaders() });
+      const res = await serverFetch(
+        `${config.server.baseUrl}/status?projectId=${encodeURIComponent(projectId)}`,
+        { headers: authHeaders() }
+      );
       if (res.ok) setStatus(await res.json());
+      // 노션 미연결(409)이면 보여줄 색인 자체가 없다
+      else setStatus(null);
     } catch {
       // 상태 표시는 부가 기능 — 실패해도 채팅은 동작한다
     }
-  }, []);
+  }, [projectId]);
 
   useEffect(() => {
     load();
@@ -84,18 +95,22 @@ export function IndexStatus() {
           문서 {status.documentCount} · 청크 {status.chunkCount} · {formatTime(status.lastSyncedAt)}
         </span>
       )}
-      <button onClick={() => reindex('incremental')} disabled={indexing}>
-        {job?.status === 'running'
-          ? `색인 중… ${job.indexed}/${job.total || '?'}`
-          : '재색인'}
-      </button>
-      <button
-        onClick={() => reindex('full')}
-        disabled={indexing}
-        title="모든 문서를 처음부터 다시 색인합니다 — 문서가 많으면 오래 걸립니다"
-      >
-        전체 재색인
-      </button>
+      {canReindex && (
+        <>
+          <button onClick={() => reindex('incremental')} disabled={indexing}>
+            {job?.status === 'running'
+              ? `색인 중… ${job.indexed}/${job.total || '?'}`
+              : '재색인'}
+          </button>
+          <button
+            onClick={() => reindex('full')}
+            disabled={indexing}
+            title="모든 문서를 처음부터 다시 색인합니다 — 문서가 많으면 오래 걸립니다"
+          >
+            전체 재색인
+          </button>
+        </>
+      )}
       {notice && <span className="index-notice">{notice}</span>}
     </div>
   );
