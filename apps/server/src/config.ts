@@ -56,6 +56,10 @@ export const config = {
   server: {
     port: Number(process.env.PORT ?? 8787),
   },
+  security: {
+    // 노션 토큰 암호화 키(AES-256-GCM) — 32바이트 base64. 미설정 시 서버 기동 실패 (storage.md)
+    tokenEncryptionKey: process.env.MINUTES_ENCRYPTION_KEY ?? '',
+  },
   auth: {
     // 인증 없이 열려 있는 로그인·인가 시작 엔드포인트의 호출자·경로별 상한 (rules/security.md)
     // 로그인 상태 폴링(2초 주기 = 분당 30회)을 수용해야 한다

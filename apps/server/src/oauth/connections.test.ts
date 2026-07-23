@@ -235,6 +235,57 @@ describe('updateConnectionTokens', () => {
   });
 });
 
+describe('토큰 암호화 (storage.md)', () => {
+  function rawTokens(connectionId: string): { access_token: string | null; refresh_token: string | null } {
+    return db()
+      .prepare('SELECT access_token, refresh_token FROM notion_connections WHERE id = ?')
+      .get(connectionId) as { access_token: string | null; refresh_token: string | null };
+  }
+
+  it('completeConnection은 토큰을 평문으로 저장하지 않는다', () => {
+    const session = startConnection(newProject(), user.id);
+    completeConnection(session.state, { ...workspace, refreshToken: 'secret-refresh-token' });
+
+    const row = rawTokens(session.connectionId);
+    expect(row.access_token).not.toBe(workspace.accessToken);
+    expect(row.access_token).not.toContain('secret');
+    expect(row.refresh_token).not.toContain('secret');
+  });
+
+  it('updateConnectionTokens도 암호화해서 저장한다', () => {
+    const session = startConnection(newProject(), user.id);
+    completeConnection(session.state, workspace);
+
+    updateConnectionTokens(session.connectionId, { accessToken: 'renewed-secret' });
+
+    expect(rawTokens(session.connectionId).access_token).not.toContain('renewed-secret');
+  });
+
+  it('조회는 항상 평문 토큰을 돌려준다 (호출부는 복호화를 모른다)', () => {
+    const projectId = newProject();
+    const session = startConnection(projectId, user.id);
+    completeConnection(session.state, { ...workspace, refreshToken: 'secret-refresh-token' });
+
+    const connection = getConnectionByProject(projectId);
+    expect(connection?.accessToken).toBe(workspace.accessToken);
+    expect(connection?.refreshToken).toBe('secret-refresh-token');
+  });
+
+  it('복호화할 수 없는 토큰(키 교체·변조·평문 잔재)이면 pending으로 되돌린다', () => {
+    const projectId = newProject();
+    const session = startConnection(projectId, user.id);
+    completeConnection(session.state, workspace);
+    db()
+      .prepare('UPDATE notion_connections SET access_token = ? WHERE id = ?')
+      .run('plain-legacy-token', session.connectionId);
+
+    const connection = getConnectionByProject(projectId);
+    expect(connection?.status).toBe('pending');
+    expect(connection?.accessToken).toBeUndefined();
+    expect(rawTokens(session.connectionId).access_token).toBeNull();
+  });
+});
+
 describe('listConnected', () => {
   it('connected 상태의 연결만 반환한다', () => {
     const pending = startConnection(newProject(), user.id);

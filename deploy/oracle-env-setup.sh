@@ -37,6 +37,9 @@ LOGIN_SECRET="${LOGIN_SECRET:-$NOTION_SECRET}"
 echo
 ask "5) GEMINI_API_KEY (https://aistudio.google.com/apikey)" GEMINI_KEY
 
+# 노션 토큰 암호화 키 — 자동 생성 (32바이트 base64)
+ENCRYPTION_KEY="$(openssl rand -base64 32)"
+
 cat > "$ENV_FILE" <<EOF
 # oracle-env-setup.sh 로 생성됨. 콜백 URI는 SSH 터널 방식 기본값.
 NOTION_OAUTH_CLIENT_ID=$NOTION_ID
@@ -46,6 +49,7 @@ NOTION_OAUTH_LOGIN_CLIENT_ID=$LOGIN_ID
 NOTION_OAUTH_LOGIN_CLIENT_SECRET=$LOGIN_SECRET
 NOTION_OAUTH_LOGIN_REDIRECT_URI=http://localhost:8787/auth/notion/callback
 GEMINI_API_KEY=$GEMINI_KEY
+MINUTES_ENCRYPTION_KEY=$ENCRYPTION_KEY
 SQLITE_PATH=./data/minutes.db
 PORT=8787
 EOF

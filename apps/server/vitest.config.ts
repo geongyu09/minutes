@@ -9,6 +9,8 @@ export default defineConfig({
       SQLITE_PATH: ':memory:',
       // embedder는 키가 없으면 모듈 로드 시점에 실패한다(기동 실패). 테스트에서는 더미 키를 준다.
       GEMINI_API_KEY: 'test-key',
+      // 토큰 암호화 키 — 32바이트 base64 (crypto.ts는 키가 없으면 실패한다)
+      MINUTES_ENCRYPTION_KEY: Buffer.from('0123456789abcdef0123456789abcdef').toString('base64'),
     },
   },
   resolve: {

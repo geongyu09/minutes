@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { db } from '@/db';
+import { decryptToken, encryptToken } from '@/crypto';
 
 export interface NotionConnection {
   id: string;
@@ -51,15 +52,38 @@ interface ConnectionRow {
 const CONNECTION_COLUMNS =
   'id, project_id, connected_by, status, oauth_state, access_token, refresh_token, workspace_id, workspace_name';
 
+/**
+ * 토큰은 암호문으로 저장되고(storage.md) 이 경계에서만 복호화된다 — 호출부는 항상 평문을 본다.
+ * 복호화 실패(키 교체·변조·평문 잔재)는 연결을 pending으로 되돌려 재연결을 유도한다.
+ */
 function toConnection(row: ConnectionRow): NotionConnection {
+  let accessToken: string | undefined;
+  let refreshToken: string | undefined;
+  try {
+    accessToken = row.access_token ? decryptToken(row.access_token) : undefined;
+    refreshToken = row.refresh_token ? decryptToken(row.refresh_token) : undefined;
+  } catch {
+    // 변조 vs 키 오설정(배포 실수) 구분용 단서 — 토큰 값은 로깅 금지 (security.md)
+    console.warn(`토큰 복호화 실패로 연결을 pending 처리: ${row.id}`);
+    db()
+      .prepare(
+        `UPDATE notion_connections
+         SET status = 'pending', access_token = NULL, refresh_token = NULL,
+             updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+         WHERE id = ?`
+      )
+      .run(row.id);
+    return toConnection({ ...row, status: 'pending', access_token: null, refresh_token: null });
+  }
+
   return {
     id: row.id,
     projectId: row.project_id,
     connectedBy: row.connected_by ?? undefined,
     status: row.status,
     reconnecting: row.oauth_state !== null,
-    accessToken: row.access_token ?? undefined,
-    refreshToken: row.refresh_token ?? undefined,
+    accessToken,
+    refreshToken,
     workspaceId: row.workspace_id ?? undefined,
     workspaceName: row.workspace_name ?? undefined,
   };
@@ -153,8 +177,8 @@ export function completeConnection(
        RETURNING ${CONNECTION_COLUMNS}`
     )
     .get(
-      grant.accessToken,
-      grant.refreshToken ?? null,
+      encryptToken(grant.accessToken),
+      grant.refreshToken ? encryptToken(grant.refreshToken) : null,
       grant.botId ?? null,
       grant.workspaceId ?? null,
       grant.workspaceName ?? null,
@@ -192,7 +216,7 @@ export function updateConnectionTokens(connectionId: string, grant: WorkspaceGra
        SET access_token = ?, refresh_token = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
        WHERE id = ?`
     )
-    .run(grant.accessToken, grant.refreshToken ?? null, connectionId);
+    .run(encryptToken(grant.accessToken), grant.refreshToken ? encryptToken(grant.refreshToken) : null, connectionId);
 }
 
 /** 색인 대상 — 연결이 완료된 사용자 목록. */
