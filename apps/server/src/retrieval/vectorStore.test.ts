@@ -2,7 +2,9 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import type { EmbeddedChunk } from '@minutes/core';
 import { db } from '@/db';
 import { applyMigrations } from '@/migrations';
-import { completeConnection, createPendingConnection } from '@/oauth/connections';
+import { upsertUser } from '@/auth/users';
+import { createProject } from '@/projects/projects';
+import { completeConnection, startConnection } from '@/oauth/connections';
 import {
   countDocuments,
   createVectorStore,
@@ -38,8 +40,11 @@ function chunk(documentId: string, index: number, content: string, seed: number)
   };
 }
 
-function newConnection(): string {
-  const session = createPendingConnection();
+/** 프로젝트 하나 = 연결 하나 = 색인 데이터 하나. 격리 검증용으로 서로 다른 프로젝트를 만든다. */
+function newConnection(label: string): string {
+  const user = upsertUser({ notionUserId: `vs-${label}` });
+  const project = createProject(`프로젝트 ${label}`, user.id);
+  const session = startConnection(project.id, user.id);
   completeConnection(session.state, { accessToken: `token-${session.connectionId}` });
   return session.connectionId;
 }
@@ -49,8 +54,8 @@ let userB: string;
 
 beforeAll(async () => {
   applyMigrations(db());
-  userA = newConnection();
-  userB = newConnection();
+  userA = newConnection('a');
+  userB = newConnection('b');
 
   // 두 사용자가 같은 워크스페이스를 연결한 상황 — 동일 문서 ID(doc-1)가 양쪽에 존재
   await createVectorStore(userA).upsert([
@@ -86,8 +91,8 @@ describe('createVectorStore(연결별 스코프)', () => {
   });
 
   it('deleteByDocumentId는 같은 문서 ID여도 해당 사용자 것만 지운다', async () => {
-    const userC = newConnection();
-    const userD = newConnection();
+    const userC = newConnection('c');
+    const userD = newConnection('d');
     await createVectorStore(userC).upsert([chunk('shared-doc', 0, 'C의 청크', 5)]);
     await createVectorStore(userD).upsert([chunk('shared-doc', 0, 'D의 청크', 5)]);
 
@@ -117,8 +122,8 @@ describe('문서 관리 헬퍼(연결별 스코프)', () => {
   });
 
   it('deleteAllDocuments는 해당 사용자의 색인 데이터만 전부 비운다 (연결 변경 시 폐기)', async () => {
-    const userG = newConnection();
-    const userH = newConnection();
+    const userG = newConnection('g');
+    const userH = newConnection('h');
     await createVectorStore(userG).upsert([chunk('doc-y', 0, 'G의 회의록', 9)]);
     await createVectorStore(userG).upsert([chunk('doc-z', 0, 'G의 다른 회의록', 10)]);
     await createVectorStore(userH).upsert([chunk('doc-y', 0, 'H의 회의록', 9)]);
@@ -136,8 +141,8 @@ describe('문서 관리 헬퍼(연결별 스코프)', () => {
   });
 
   it('deleteDocument는 해당 사용자의 문서·청크만 지운다', async () => {
-    const userE = newConnection();
-    const userF = newConnection();
+    const userE = newConnection('e');
+    const userF = newConnection('f');
     await createVectorStore(userE).upsert([chunk('doc-x', 0, 'E의 청크', 7)]);
     await createVectorStore(userF).upsert([chunk('doc-x', 0, 'F의 청크', 7)]);
 
