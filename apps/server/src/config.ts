@@ -1,10 +1,20 @@
 export const config = {
   notion: {
     // OAuth(Public Integration) — 2026-07-22 확정. 사용자별 액세스 토큰은 DB에 저장.
+    // 색인용 워크스페이스 연결 인가
     oauthClientId: process.env.NOTION_OAUTH_CLIENT_ID!,
     oauthClientSecret: process.env.NOTION_OAUTH_CLIENT_SECRET!,
     oauthRedirectUri: process.env.NOTION_OAUTH_REDIRECT_URI!,
-    requestsPerSecond: 3,        // 노션 rate limit
+    // 로그인("노션으로 로그인") 인가 — 별도 통합(client id/secret)·콜백을 쓴다.
+    // 목적(로그인 vs 색인)이 다른 토큰을 섞지 않기 위해서다 (sharing.md).
+    // secret이 없으면 색인용 secret으로 폴백한다 (같은 통합을 쓰는 경우 호환).
+    oauthLoginClientId: process.env.NOTION_OAUTH_LOGIN_CLIENT_ID ?? process.env.NOTION_OAUTH_CLIENT_ID!,
+    oauthLoginClientSecret:
+      process.env.NOTION_OAUTH_LOGIN_CLIENT_SECRET ?? process.env.NOTION_OAUTH_CLIENT_SECRET!,
+    oauthLoginRedirectUri: process.env.NOTION_OAUTH_LOGIN_REDIRECT_URI!,
+    requestsPerSecond: 3,        // 노션 rate limit (연결별 예산)
+    concurrency: 3,              // 동시 실행 상한 — RTT가 처리량 상한이 되지 않게 한다
+    rateLimitCooldownMs: 60_000, // 429 이후 동시성을 1로 낮춰 두는 기간
     maxRetries: 5,
   },
   chunking: {
@@ -41,8 +51,15 @@ export const config = {
   },
   sync: {
     intervalMs: 10 * 60_000,     // 증분 동기화 주기 (서버 내 타이머)
+    fullListEveryNRuns: 6,       // N회차마다 전체 목록을 받아 삭제를 정리한다 (기본 6 = 1시간)
   },
   server: {
     port: Number(process.env.PORT ?? 8787),
+  },
+  auth: {
+    // 인증 없이 열려 있는 로그인·인가 시작 엔드포인트의 호출자·경로별 상한 (rules/security.md)
+    // 로그인 상태 폴링(2초 주기 = 분당 30회)을 수용해야 한다
+    rateLimitPerMinute: 60,
+    rateLimitWindowMs: 60_000,
   },
 } as const;

@@ -4,74 +4,66 @@ import { createNotionAuthClient } from './notionAuth';
 const okResponse = (body: unknown): Response =>
   new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
 
+function capturing(body: unknown) {
+  const calls: { url: string; init?: RequestInit }[] = [];
+  const client = createNotionAuthClient(
+    'http://server:8787',
+    async (url, init) => {
+      calls.push({ url: String(url), init });
+      return okResponse(body);
+    },
+    () => 'app-token'
+  );
+  return { calls, client };
+}
+
 describe('createNotionAuthClient', () => {
-  it('startSession은 서버에서 앱 토큰과 인가 URL을 받아온다', async () => {
-    let captured: { url: string; init?: RequestInit } | undefined;
-    const client = createNotionAuthClient('http://server:8787', async (url, init) => {
-      captured = { url: String(url), init };
-      return okResponse({ appToken: 'app-token', authUrl: 'https://notion.example/authorize' });
-    });
+  it('startConnect는 프로젝트 스코프로 인가 URL을 받아온다', async () => {
+    const { calls, client } = capturing({ authUrl: 'https://notion.example/authorize' });
 
-    const session = await client.startSession();
+    const authUrl = await client.startConnect('p-1');
 
-    expect(captured?.url).toBe('http://server:8787/oauth/notion/session');
-    expect(captured?.init?.method).toBe('POST');
-    expect(session).toEqual({ appToken: 'app-token', authUrl: 'https://notion.example/authorize' });
+    expect(calls[0].url).toBe('http://server:8787/oauth/notion/session?projectId=p-1');
+    expect(calls[0].init?.method).toBe('POST');
+    expect((calls[0].init?.headers as Record<string, string>).authorization).toBe('Bearer app-token');
+    expect(authUrl).toBe('https://notion.example/authorize');
   });
 
-  it('getStatus는 앱 토큰을 Bearer 헤더로 보내 연결 상태를 조회한다', async () => {
-    let captured: { url: string; init?: RequestInit } | undefined;
-    const client = createNotionAuthClient('http://server:8787', async (url, init) => {
-      captured = { url: String(url), init };
-      return okResponse({ connected: true, workspaceName: '우리 팀' });
-    });
+  it('연결 변경도 같은 엔드포인트다 — 인가가 끝날 때까지 기존 연결은 살아 있다', async () => {
+    const { calls, client } = capturing({ authUrl: 'https://notion.example/authorize?state=2' });
 
-    const status = await client.getStatus('app-token');
+    await client.startConnect('p-1');
 
-    expect(captured?.url).toBe('http://server:8787/oauth/notion/status');
-    expect((captured?.init?.headers as Record<string, string>).authorization).toBe('Bearer app-token');
+    expect(calls[0].url).toContain('/oauth/notion/session');
+  });
+
+  it('getStatus는 프로젝트의 연결 상태를 조회한다', async () => {
+    const { calls, client } = capturing({ connected: true, workspaceName: '우리 팀' });
+
+    const status = await client.getStatus('p-1');
+
+    expect(calls[0].url).toBe('http://server:8787/oauth/notion/status?projectId=p-1');
+    expect((calls[0].init?.headers as Record<string, string>).authorization).toBe('Bearer app-token');
     expect(status).toEqual({ connected: true, workspaceName: '우리 팀' });
   });
 
-  it('startReconnect는 앱 토큰을 유지한 채 새 인가 URL만 받아온다', async () => {
-    let captured: { url: string; init?: RequestInit } | undefined;
-    const client = createNotionAuthClient('http://server:8787', async (url, init) => {
-      captured = { url: String(url), init };
-      return okResponse({ authUrl: 'https://notion.example/authorize?state=2' });
-    });
+  it('cancel은 진행 중인 인가만 취소한다', async () => {
+    const { calls, client } = capturing({ cancelled: true });
 
-    const authUrl = await client.startReconnect('app-token');
+    await client.cancel('p-1');
 
-    expect(captured?.url).toBe('http://server:8787/oauth/notion/reconnect');
-    expect(captured?.init?.method).toBe('POST');
-    expect((captured?.init?.headers as Record<string, string>).authorization).toBe(
-      'Bearer app-token'
-    );
-    expect(authUrl).toBe('https://notion.example/authorize?state=2');
-  });
-
-  it('cancel은 앱 토큰을 Bearer 헤더로 보내 진행 중인 인가를 취소한다', async () => {
-    let captured: { url: string; init?: RequestInit } | undefined;
-    const client = createNotionAuthClient('http://server:8787', async (url, init) => {
-      captured = { url: String(url), init };
-      return okResponse({ cancelled: true });
-    });
-
-    await client.cancel('app-token');
-
-    expect(captured?.url).toBe('http://server:8787/oauth/notion/cancel');
-    expect(captured?.init?.method).toBe('POST');
-    expect((captured?.init?.headers as Record<string, string>).authorization).toBe(
-      'Bearer app-token'
-    );
+    expect(calls[0].url).toBe('http://server:8787/oauth/notion/cancel?projectId=p-1');
+    expect(calls[0].init?.method).toBe('POST');
   });
 
   it('서버 오류면 예외를 던진다', async () => {
-    const client = createNotionAuthClient('http://server:8787', async () =>
-      new Response('{}', { status: 500 })
+    const client = createNotionAuthClient(
+      'http://server:8787',
+      async () => new Response('{}', { status: 500 }),
+      () => 'app-token'
     );
 
-    await expect(client.startSession()).rejects.toThrow();
-    await expect(client.getStatus('t')).rejects.toThrow();
+    await expect(client.startConnect('p-1')).rejects.toThrow();
+    await expect(client.getStatus('p-1')).rejects.toThrow();
   });
 });

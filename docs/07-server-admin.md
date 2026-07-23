@@ -27,7 +27,8 @@
 | --- | --- | --- | --- |
 | `NOTION_OAUTH_CLIENT_ID` | 필수 | — | 노션 OAuth 앱 client id |
 | `NOTION_OAUTH_CLIENT_SECRET` | 필수 | — | 노션 OAuth 앱 secret (Basic 인증에 사용) |
-| `NOTION_OAUTH_REDIRECT_URI` | 필수 | — | 콜백 URL. **노션 앱 설정값과 정확히 일치**해야 합니다. 로컬 기본값은 `http://localhost:8787/oauth/notion/callback` |
+| `NOTION_OAUTH_REDIRECT_URI` | 필수 | — | **색인용 연결** 인가의 콜백 URL. **노션 앱 설정값과 정확히 일치**해야 합니다. 로컬 기본값은 `http://localhost:8787/oauth/notion/callback` |
+| `NOTION_OAUTH_LOGIN_REDIRECT_URI` | 필수 | — | **"노션으로 로그인"** 인가의 콜백 URL. 위와 별개로 노션 앱 설정에 함께 등록해야 합니다. 로컬 기본값은 `http://localhost:8787/auth/notion/callback` |
 | `GEMINI_API_KEY` | 필수 | `''` | 임베딩 API 키. 빈 값이면 기동 실패 |
 | `SQLITE_PATH` | 선택 | `./data/minutes.db` | DB 파일 경로. `:memory:`도 지원 |
 | `PORT` | 선택 | `8787` | HTTP 포트 |

@@ -1,76 +1,45 @@
+import type { User } from '@/auth/users';
+import type { Membership } from '@/projects/projects';
 import type {
   CompletedConnection,
   ConnectionSession,
   NotionConnection,
   WorkspaceGrant,
 } from '@/oauth/connections';
+import { requireMembership } from './projectHandlers';
 
-/** Authorization: Bearer <앱 토큰> 헤더로 요청 사용자의 연결을 찾는다. */
-export function authenticate(
-  authorizationHeader: string | undefined,
-  find: (appToken: string) => NotionConnection | null
-): NotionConnection | null {
-  if (!authorizationHeader?.startsWith('Bearer ')) return null;
-  const token = authorizationHeader.slice('Bearer '.length).trim();
-  if (!token) return null;
-  return find(token);
-}
+type GetMembership = (projectId: string, userId: string) => Membership | null;
 
 export interface OauthSessionDeps {
-  createSession: () => ConnectionSession;
+  getMembership: GetMembership;
+  startConnection: (projectId: string, userId: string) => ConnectionSession;
   buildAuthUrl: (state: string) => string;
 }
 
 export interface OauthSessionResult {
   status: number;
-  body: { appToken: string; authUrl: string };
-}
-
-/**
- * POST /oauth/notion/session — 데스크톱 앱이 연결을 시작한다.
- * 앱 토큰(이후 모든 요청의 Bearer 인증)과 노션 인가 URL을 발급한다.
- */
-export function handleOauthSession(deps: OauthSessionDeps): OauthSessionResult {
-  const session = deps.createSession();
-  return {
-    status: 200,
-    body: { appToken: session.appToken, authUrl: deps.buildAuthUrl(session.state) },
-  };
-}
-
-export interface OauthReconnectDeps {
-  startReconnect: (connectionId: string) => string | null;
-  buildAuthUrl: (state: string) => string;
-}
-
-export interface OauthReconnectResult {
-  status: number;
   body: { authUrl?: string; error?: string };
 }
 
 /**
- * POST /oauth/notion/reconnect — 연결한 노션 워크스페이스를 바꾼다.
- * 앱 토큰과 기존 연결은 그대로 두고 인가 URL만 새로 발급한다 — 인가를 포기해도 기존 연결이 살아 있다.
+ * POST /oauth/notion/session — 프로젝트에 색인용 노션 인가를 시작한다 (owner 전용).
+ * 이미 연결된 프로젝트에서 다시 호출하면 연결 변경이 된다 — 기존 연결·토큰은 인가가 끝날 때까지 살아 있다.
  */
-export function handleOauthReconnect(
-  connection: NotionConnection | null,
-  deps: OauthReconnectDeps
-): OauthReconnectResult {
-  if (!connection) {
-    return { status: 401, body: { error: '유효하지 않은 앱 토큰입니다' } };
-  }
-  if (connection.status !== 'connected') {
-    return { status: 403, body: { error: '아직 연결되지 않았습니다. 먼저 노션을 연결하세요.' } };
-  }
+export function handleOauthSession(
+  user: User | null,
+  projectId: string | undefined,
+  deps: OauthSessionDeps
+): OauthSessionResult {
+  const check = requireMembership(user, projectId, deps.getMembership, 'owner');
+  if (check.error) return check.error;
 
-  const state = deps.startReconnect(connection.id);
-  if (!state) {
-    return { status: 404, body: { error: '연결을 찾을 수 없습니다' } };
-  }
-  return { status: 200, body: { authUrl: deps.buildAuthUrl(state) } };
+  const session = deps.startConnection(projectId!, user!.id);
+  return { status: 200, body: { authUrl: deps.buildAuthUrl(session.state) } };
 }
 
 export interface OauthCancelDeps {
+  getMembership: GetMembership;
+  getConnection: (projectId: string) => NotionConnection | null;
   cancelAuthorization: (connectionId: string) => void;
 }
 
@@ -85,13 +54,15 @@ export interface OauthCancelResult {
  * 진행 중인 인가가 없어도 200 — 취소는 멱등이다.
  */
 export function handleOauthCancel(
-  connection: NotionConnection | null,
+  user: User | null,
+  projectId: string | undefined,
   deps: OauthCancelDeps
 ): OauthCancelResult {
-  if (!connection) {
-    return { status: 401, body: { error: '유효하지 않은 앱 토큰입니다' } };
-  }
-  deps.cancelAuthorization(connection.id);
+  const check = requireMembership(user, projectId, deps.getMembership, 'owner');
+  if (check.error) return check.error;
+
+  const connection = deps.getConnection(projectId!);
+  if (connection) deps.cancelAuthorization(connection.id);
   return { status: 200, body: { cancelled: true } };
 }
 
@@ -153,13 +124,19 @@ export interface OauthStatusResult {
 /**
  * GET /oauth/notion/status — 앱이 연결(또는 연결 변경) 완료 여부를 폴링한다.
  * 변경은 같은 워크스페이스를 다시 고를 수도 있어 이름 변화로 판단할 수 없으므로 `reconnecting`으로 알린다.
+ * member도 조회할 수 있다 — 자기 프로젝트가 색인 가능한 상태인지 알아야 한다.
  */
-export function handleOauthStatus(connection: NotionConnection | null): OauthStatusResult {
-  if (!connection) {
-    return { status: 401, body: { error: '유효하지 않은 앱 토큰입니다' } };
-  }
-  if (connection.status !== 'connected') {
-    return { status: 200, body: { connected: false, reconnecting: connection.reconnecting } };
+export function handleOauthStatus(
+  user: User | null,
+  projectId: string | undefined,
+  deps: { getMembership: GetMembership; getConnection: (projectId: string) => NotionConnection | null }
+): OauthStatusResult {
+  const check = requireMembership(user, projectId, deps.getMembership);
+  if (check.error) return check.error;
+
+  const connection = deps.getConnection(projectId!);
+  if (!connection || connection.status !== 'connected') {
+    return { status: 200, body: { connected: false, reconnecting: connection?.reconnecting ?? false } };
   }
   return {
     status: 200,
