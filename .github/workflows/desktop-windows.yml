@@ -1,0 +1,41 @@
+name: desktop-windows-build
+
+on:
+  # 이 워크플로 파일이 변경돼 푸시되면 어떤 브랜치든 빌드가 실행된다
+  push:
+    paths:
+      - '.github/workflows/desktop-windows.yml'
+  # 기본 브랜치(main)에 머지된 뒤에는 Actions 탭에서 수동 실행 가능
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+
+      - name: 의존성 설치
+        run: bun install --frozen-lockfile
+
+      - name: Tauri 빌드 (Windows 설치본)
+        working-directory: apps/desktop
+        env:
+          NEXT_PUBLIC_MINUTES_SERVER_URL: https://minutes-geongyu.duckdns.org
+        run: bun run tauri:build
+
+      - name: 설치본 업로드
+        uses: actions/upload-artifact@v4
+        with:
+          name: minutes-windows
+          path: |
+            apps/desktop/src-tauri/target/release/bundle/msi/*.msi
+            apps/desktop/src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error
